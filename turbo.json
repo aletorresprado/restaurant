@@ -1,0 +1,15 @@
+﻿{
+  "ui": "tui",
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "dev": { "cache": false, "persistent": true },
+    "lint": { "dependsOn": ["^build"] },
+    "format": { "cache": false },
+    "test": { "dependsOn": ["^build"], "cache": false },
+    "test:unit": { "cache": false },
+    "test:integration": { "cache": false },
+    "db:generate": { "cache": false },
+    "db:migrate": { "cache": false },
+    "db:seed": { "cache": false }
+  }
+}
