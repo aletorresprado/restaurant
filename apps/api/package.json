@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",
+    "start:dev": "nest start --watch",
     "start": "node dist/main",
     "test": "jest",
     "test:unit": "jest --testPathPattern=spec",
