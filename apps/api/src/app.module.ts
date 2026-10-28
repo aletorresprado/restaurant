@@ -4,6 +4,9 @@ import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './environment';
+import { BranchesModule } from './branches/branches.module';
+import { OperationsModule } from './operations/operations.module';
+import { ReservationsModule } from './reservations/reservations.module';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { validateEnvironment } from './environment';
     }),
     DatabaseModule,
     AuthModule,
+    BranchesModule,
+    OperationsModule,
+    ReservationsModule,
   ],
   controllers: [AppController],
 })

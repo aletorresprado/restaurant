@@ -1,4 +1,4 @@
-// Runs against a real migrated PostgreSQL database. Deletes only its own random test user.
+// Runs against real migrated PostgreSQL. Deletes only its own random users and branches.
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const { randomUUID, createHash } = require('node:crypto');
@@ -14,6 +14,8 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 async function main() {
   const db = new PrismaClient();
   const email = `integration-${randomUUID()}@example.invalid`;
+  const adminEmail = `admin-${email}`;
+  const branchNames = [`Integration A ${randomUUID()}`, `Integration B ${randomUUID()}`];
   let child;
   let userId;
   try {
@@ -75,6 +77,82 @@ async function main() {
     const winner = concurrent.find(r => r.status === 200);
     assert.equal((await request('logout', { refreshToken: winner.body.refreshToken })).status, 200);
     assert.equal((await request('refresh', { refreshToken: winner.body.refreshToken })).status, 401);
+
+    const api = async (method, route, body, token) => {
+      const response = await fetch(`${base}/${route}`, {
+        method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(10000),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+    // Fixture provisioning is limited to this random test account; production admins use db:seed.
+    const administrator = await db.user.create({ data: {
+      firstName: 'Integration', lastName: 'Admin', email: adminEmail, passwordHash: persisted.passwordHash, role: 'ADMIN',
+    } });
+    const adminLogin = await request('login', { email: adminEmail, password: registration.password });
+    assert.equal(adminLogin.status, 200);
+    const adminToken = adminLogin.body.accessToken;
+    const customerToken = created.body.accessToken;
+    const branchData = { name: branchNames[0], address: 'Integration street 123' };
+    assert.equal((await api('POST', 'admin/branches', branchData)).status, 401);
+    assert.equal((await api('POST', 'admin/branches', branchData, customerToken)).status, 403);
+    assert.equal((await api('GET', 'admin/users', undefined, customerToken)).status, 403);
+    assert.equal((await api('POST', 'admin/branches', { ...branchData, latitude: -26 }, adminToken)).status, 400);
+    const branch = await api('POST', 'admin/branches', branchData, adminToken);
+    assert.equal(branch.status, 201);
+    const branchId = branch.body.id;
+    const otherBranch = await api('POST', 'admin/branches', { ...branchData, name: branchNames[1] }, adminToken);
+    assert.equal(otherBranch.status, 201);
+    assert.equal((await api('GET', `branches/${branchId}`)).status, 200);
+    assert.equal((await api('GET', 'branches?page=0')).status, 400);
+    assert.equal((await api('GET', 'branches/not-a-uuid')).status, 400);
+    assert.equal((await api('GET', `branches/${randomUUID()}`)).status, 404);
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, {}, adminToken)).status, 400);
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, { unknown: true }, adminToken)).status, 400);
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, { latitude: -26 }, adminToken)).status, 400);
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, { latitude: -26, longitude: -65 }, adminToken)).status, 200);
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, { latitude: -27 }, adminToken)).status, 200);
+    assert.equal((await api('PUT', `admin/branches/${branchId}/staff/${userId}`, undefined, adminToken)).status, 400);
+    assert.equal((await api('PATCH', `admin/users/${userId}/role`, { role: 'ADMIN' }, adminToken)).status, 400);
+    assert.equal((await api('PATCH', `admin/users/${administrator.id}/role`, { role: 'CUSTOMER' }, adminToken)).status, 403);
+    assert.equal((await api('PATCH', `admin/users/${userId}/role`, { role: 'STAFF' }, adminToken)).status, 200);
+    // The token was issued with CUSTOMER; current DB role must take effect without re-login.
+    assert.deepEqual((await api('GET', 'staff/branches', undefined, customerToken)).body.data, []);
+    assert.equal((await api('PUT', `admin/branches/${branchId}/staff/${userId}`, undefined, adminToken)).status, 200);
+    assert.equal((await api('PUT', `admin/branches/${branchId}/staff/${userId}`, undefined, adminToken)).status, 200);
+    assert.equal(await db.branchStaff.count({ where: { branchId, userId } }), 1);
+    const assigned = await api('GET', 'staff/branches', undefined, customerToken);
+    assert.equal(assigned.status, 200);
+    assert.deepEqual(assigned.body.data.map(b => b.id), [branchId]);
+    assert.equal((await api('GET', `staff/branches/${branchId}`, undefined, customerToken)).status, 200);
+    assert.equal((await api('GET', `staff/branches/${otherBranch.body.id}`, undefined, customerToken)).status, 403);
+    await require('./operations.integration.cjs')({ api, db, branchId, otherBranchId: otherBranch.body.id, adminToken, staffToken: customerToken });
+    await require('./reservations.integration.cjs')({ api, db, branchId, otherBranchId: otherBranch.body.id, adminToken, staffToken: customerToken });
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, { name: 'Forbidden change' }, customerToken)).status, 403);
+    assert.equal((await api('GET', `admin/branches/${branchId}/staff`, undefined, customerToken)).status, 403);
+    const staff = await api('GET', `admin/branches/${branchId}/staff`, undefined, adminToken);
+    assert.equal(staff.status, 200);
+    assert.equal(staff.body[0].user.id, userId);
+    assert.equal(JSON.stringify(staff.body).includes('passwordHash'), false);
+    assert.equal((await api('GET', 'admin/users', undefined, adminToken)).status, 200);
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, { isActive: false }, adminToken)).status, 200);
+    assert.equal((await api('GET', `branches/${branchId}`)).status, 404);
+    assert.equal((await api('GET', `staff/branches/${branchId}`, undefined, customerToken)).status, 404);
+    assert.deepEqual((await api('GET', 'staff/branches', undefined, customerToken)).body.data, []);
+    assert.equal((await api('GET', `admin/branches/${branchId}`, undefined, adminToken)).body.isActive, false);
+    assert.equal((await api('PATCH', `admin/branches/${branchId}`, { isActive: true }, adminToken)).status, 200);
+    assert.equal((await api('DELETE', `admin/branches/${branchId}/staff/${userId}`, undefined, adminToken)).status, 200);
+    assert.equal((await api('GET', `staff/branches/${branchId}`, undefined, customerToken)).status, 403);
+    assert.equal((await api('PUT', `admin/branches/${branchId}/staff/${userId}`, undefined, adminToken)).status, 200);
+    const [demotion, assignment] = await Promise.all([
+      api('PATCH', `admin/users/${userId}/role`, { role: 'CUSTOMER' }, adminToken),
+      api('PUT', `admin/branches/${branchId}/staff/${userId}`, undefined, adminToken),
+    ]);
+    assert.equal(demotion.status, 200);
+    assert.ok([200, 400].includes(assignment.status));
+    assert.equal(await db.branchStaff.count({ where: { userId } }), 0);
+    assert.equal((await api('GET', 'staff/branches', undefined, customerToken)).status, 403);
+    console.log('OK: sucursales persistidas, roles actuales, asignaciones, aislamiento, validación y desactivación.');
     await db.user.update({ where: { id: userId }, data: { isActive: false } });
     assert.equal((await request('me', undefined, created.body.accessToken)).status, 401);
     console.log('OK: registro, persistencia, login, perfil, rotación concurrente, logout y cuenta desactivada.');
@@ -85,7 +163,8 @@ async function main() {
       await closed;
     }
     // Exact random address prevents touching any existing account, including on a partial failure.
-    await db.user.deleteMany({ where: { email } });
+    await db.branch.deleteMany({ where: { name: { in: branchNames } } });
+    await db.user.deleteMany({ where: { email: { in: [email, adminEmail] } } });
     await db.$disconnect();
   }
 }

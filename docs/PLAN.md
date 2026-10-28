@@ -1,10 +1,16 @@
 # Plan de desarrollo de App Resto
 
-Actualizado: 27 de octubre de 2026.
+Actualizado: 28 de octubre de 2026.
 
 ## Objetivo
 
 Construir un sistema de reservas y fidelización para un restaurante con varias sucursales, con una API persistente y una interfaz para clientes y personal.
+
+## Estado y recorrido restante
+
+Las etapas 1 a 4 están implementadas y verificadas en desarrollo local. No hay despliegue productivo ni frontend. Para llegar a producción faltan, en este orden, cerrar asistencia y fidelización (5), completar los recorridos de la interfaz (6) y verificar seguridad, infraestructura y operación del despliegue (7).
+
+La [hoja de ruta a producción](PRODUCCION.md) desglosa esos pendientes, las decisiones del propietario y los criterios para publicar. Tener el código subido a GitHub o Swagger accesible localmente no completa la etapa de despliegue.
 
 ## Método de trabajo
 
@@ -31,36 +37,51 @@ Validado: compilación, chequeo de tipos, esquema Prisma, 11 pruebas automatizad
 
 Límites actuales: no hay recuperación de contraseña, verificación de correo, límite de intentos de login, revocación inmediata del access token ni limpieza programada de sesiones vencidas. El administrador inicial no se crea automáticamente.
 
-## 2. Permisos y sucursales — pendiente, próxima etapa
+## 2. Permisos y sucursales — completada
 
-1. Implementar y probar autorización para `CUSTOMER`, `STAFF` y `ADMIN`.
-2. Definir si el personal tiene acceso a todas las sucursales o únicamente a las asignadas.
-3. Crear modelos y migraciones de sucursales y asignaciones, si corresponden.
-4. Implementar consulta de sucursales activas y administración de altas, cambios y desactivación.
-5. Proteger las operaciones administrativas y documentarlas en Swagger.
+- [x] Autorización para `CUSTOMER`, `STAFF` y `ADMIN`, usando el rol actual de la base.
+- [x] Personal limitado a sus sucursales activas asignadas; administrador con alcance global.
+- [x] Modelos `Branch` y `BranchStaff`, con migración incremental aplicada localmente.
+- [x] Consulta pública de sucursales activas y administración de altas, cambios y desactivación.
+- [x] Asignación y retiro de personal, consulta administrativa de usuarios y cambio CUSTOMER/STAFF.
+- [x] Rutas protegidas, validación de coordenadas y documentación Swagger.
+- [x] Pruebas contra PostgreSQL de permisos, persistencia, aislamiento y cambios de rol con tokens existentes.
+
+Decisiones: desactivar conserva asignaciones; bajar a CUSTOMER las elimina. No se crean ni modifican administradores desde la API de roles. La asignación y el cambio de rol bloquean la fila del usuario para coordinar solicitudes concurrentes. La consulta pública no requiere login y no expone personal. Ver [SUCURSALES.md](SUCURSALES.md).
+
+Validación: compilación, 11 pruebas existentes, chequeo de tipos, esquema Prisma e integración real ampliada. Las pruebas de integración crean y eliminan exclusivamente sus usuarios y sucursales temporales.
 
 Criterio de cierre: un administrador gestiona sucursales; un cliente consulta las disponibles y recibe un rechazo al intentar modificarlas. Pruebas de permisos y persistencia aprobadas.
 
-## 3. Mesas, horarios y bloqueos — pendiente
+## 3. Mesas, horarios y bloqueos — completada
 
-1. Definir mesas por sucursal, capacidad, estado y reglas de desactivación.
-2. Implementar horarios de atención, excepciones por fecha y bloqueos de mesas.
-3. Usar la zona horaria del restaurante al interpretar horarios y UTC para instantes persistidos.
-4. Validar intervalos, pertenencia a sucursal y restricciones por rol.
+- [x] Mesas por sucursal, capacidad 1–50, número inmutable único y estados operativos.
+- [x] Horario semanal por día ISO, excepciones por fecha y bloqueos temporales.
+- [x] Zona del restaurante para fechas de servicio y ventanas UTC, incluido cruce de medianoche.
+- [x] Permisos por sucursal para ADMIN y STAFF asignado; rechazo de IDs de otra sucursal.
+- [x] Validación de estado final en PATCH y solapamientos semanales, excepciones y bloqueos.
+- [x] Migración aplicada, restricciones de integridad y transacciones para solicitudes concurrentes.
+- [x] Compilación, 13 pruebas, chequeo de tipos, esquema Prisma e integración real ampliada.
+
+Decisiones: un servicio por día de semana; la fecha identifica el inicio del servicio. Una excepción reemplaza ese servicio y no recorta el del día anterior. Intervalos semiabiertos permiten extremos contiguos. No hay eliminación de mesas por HTTP: se usa OUT_OF_SERVICE. Detalles y límites en [OPERACION.md](OPERACION.md).
 
 Criterio de cierre: el personal autorizado configura capacidad y horarios; la API rechaza intervalos inválidos y operaciones fuera de su alcance. Migraciones y pruebas aprobadas.
 
-## 4. Disponibilidad y reservas — pendiente
+## 4. Disponibilidad y reservas — completada
 
-1. Definir duración, tamaño del grupo y política de selección o combinación de mesas.
-2. Consultar disponibilidad considerando horarios, capacidad, bloqueos y reservas existentes.
-3. Crear reservas confirmadas con control transaccional de concurrencia.
-4. Implementar consulta de reservas propias y agenda del personal autorizado.
-5. Aplicar cancelación del cliente y del restaurante, con registro de eventos.
+- [x] Duración de 120 minutos, grupos 1–50 y una mesa por reserva, asignación por capacidad suficiente más pequeña.
+- [x] Disponibilidad pública por fecha de servicio, horarios, excepciones, capacidad, estado, bloqueos y reservas confirmadas.
+- [x] Confirmación transaccional y coordinación con cambios operativos mediante bloqueo por sucursal.
+- [x] Reservas propias, detalle e historial; agenda y detalle para personal autorizado.
+- [x] Cancelación del cliente con al menos 6 horas y del restaurante antes del inicio, con actor y motivo cuando corresponde.
+- [x] Protección de reservas frente a bloqueos y cambios de capacidad, estado, horario o desactivación.
+- [x] Migración aplicada, compilación, 15 pruebas, tipos, esquema e integración PostgreSQL con concurrencia.
+
+Decisiones: no se combinan mesas ni se permite elegir una mesa concreta desde el cliente. La consulta no retiene cupo. Cancelar libera la mesa; repetir la misma cancelación no duplica eventos. No hay reprogramación, reservas por cuenta de terceros ni notificaciones. Detalles en [RESERVAS.md](RESERVAS.md).
 
 Criterio de cierre: un cliente completa una reserva real y puede consultarla o cancelarla según la política. Dos solicitudes simultáneas no pueden reservar la misma mesa en intervalos superpuestos. Cubrir horarios límite y zona horaria.
 
-## 5. Asistencia y fidelización — pendiente
+## 5. Asistencia y fidelización — pendiente, próxima etapa
 
 1. Registrar asistencia y ausencia con la tolerancia configurada.
 2. Persistir transacciones de puntos con trazabilidad y aplicación única por evento.
@@ -91,6 +112,8 @@ Criterio de cierre: los recorridos principales funcionan desde la interfaz contr
 
 Criterio de cierre: despliegue reproducible con configuración separada, respaldo y restauración comprobados, permisos verificados y monitoreo básico. La elección de cuentas o servicios pagos se confirma con el propietario antes de contratar.
 
+Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye seguridad de autenticación, reconciliación de reintentos de reserva, CI, entorno de prueba, migraciones, restauración y validación del primer lanzamiento. Todos esos controles de publicación siguen pendientes.
+
 ## Comandos de comprobación
 
 Desde la raíz del repositorio:
@@ -104,4 +127,4 @@ pnpm.cmd --filter @repo/api test:integration
 git diff --check
 ```
 
-La integración necesita una base de desarrollo migrada y crea y elimina su propio usuario temporal. Nunca usar una base de producción para esta prueba. Consultar `README.md` para preparar la conexión y aplicar las migraciones.
+La integración necesita una base de desarrollo migrada y crea y elimina sus propios usuarios, sesiones y sucursales temporales. Nunca usar una base de producción para esta prueba. Consultar `README.md` para preparar la conexión y aplicar las migraciones.

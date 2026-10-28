@@ -25,6 +25,151 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   sessions     Session[]
+  branches     BranchStaff[]
+  reservations Reservation[]
+  reservationEvents ReservationEvent[]
+}
+
+model Branch {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  address   String
+  phone     String?
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  staff     BranchStaff[]
+  tables    RestaurantTable[]
+  schedules BranchSchedule[]
+  exceptions BranchScheduleException[]
+  reservations Reservation[]
+
+  @@index([isActive, name])
+}
+
+enum TableStatus {
+  ACTIVE
+  BLOCKED
+  OUT_OF_SERVICE
+}
+
+model RestaurantTable {
+  id          String @id @default(uuid()) @db.Uuid
+  branchId    String @db.Uuid
+  tableNumber String @db.VarChar(10)
+  capacity    Int
+  tableStatus TableStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  branch      Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  blocks      TableBlock[]
+  reservations Reservation[]
+
+  @@unique([branchId, tableNumber])
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED_BY_CUSTOMER
+  CANCELLED_BY_RESTAURANT
+  ATTENDED
+  NO_SHOW
+}
+
+enum ReservationEventType {
+  RESERVATION_CREATED
+  RESERVATION_CONFIRMED
+  CUSTOMER_CANCELLED
+  RESTAURANT_CANCELLED
+  ATTENDANCE_CONFIRMED
+  NO_SHOW_RECORDED
+  STATUS_CHANGED
+}
+
+model Reservation {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  branchId String @db.Uuid
+  tableId String @db.Uuid
+  serviceDate String @db.VarChar(10)
+  partySize Int
+  startAt DateTime @db.Timestamptz(3)
+  endAt DateTime @db.Timestamptz(3)
+  status ReservationStatus @default(CONFIRMED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  table RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  events ReservationEvent[]
+
+  @@index([tableId, status, startAt, endAt])
+  @@index([userId, startAt])
+  @@index([branchId, serviceDate])
+}
+
+model ReservationEvent {
+  id String @id @default(uuid()) @db.Uuid
+  reservationId String @db.Uuid
+  actorId String? @db.Uuid
+  type ReservationEventType
+  reason String?
+  createdAt DateTime @default(now())
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([reservationId, createdAt])
+}
+
+model TableBlock {
+  id        String @id @default(uuid()) @db.Uuid
+  tableId   String @db.Uuid
+  startAt   DateTime @db.Timestamptz(3)
+  endAt     DateTime @db.Timestamptz(3)
+  reason    String
+  createdAt DateTime @default(now())
+  table     RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@index([tableId, startAt, endAt])
+}
+
+model BranchSchedule {
+  id        String @id @default(uuid()) @db.Uuid
+  branchId  String @db.Uuid
+  dayOfWeek Int
+  openingTime String @db.VarChar(5)
+  closingTime String @db.VarChar(5)
+  reservationIntervalMinutes Int @default(30)
+  isActive Boolean @default(true)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, dayOfWeek])
+}
+
+model BranchScheduleException {
+  id String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  date String @db.VarChar(10)
+  isClosed Boolean @default(false)
+  openingTime String? @db.VarChar(5)
+  closingTime String? @db.VarChar(5)
+  reason String?
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, date])
+}
+
+model BranchStaff {
+  branchId String   @db.Uuid
+  userId   String   @db.Uuid
+  createdAt DateTime @default(now())
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([branchId, userId])
+  @@index([userId])
 }
 
 model Session {

@@ -8,7 +8,7 @@ export * from './branch.schemas';
 export * from './schedule.schemas';
 export * from './table.schemas';
 export * from './user.schemas';
+export * from './reservation.schemas';
 
 // Los siguientes schemas se agregarán en fases posteriores:
-// export * from './reservation.schemas';  // Fase 2
 // export * from './survey.schemas';       // Fase 5

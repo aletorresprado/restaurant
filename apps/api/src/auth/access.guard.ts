@@ -3,8 +3,9 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { z } from 'zod';
 import { PrismaService } from '../database/prisma.service';
+import { Role } from '@repo/shared-types';
 
-export type UserRequest = Request & { userId: string };
+export type UserRequest = Request & { userId: string; userRole: Role };
 
 @Injectable()
 export class AccessGuard implements CanActivate {
@@ -19,6 +20,7 @@ export class AccessGuard implements CanActivate {
       const user = await this.db.user.findUnique({ where: { id } });
       if (!user?.isActive) throw new UnauthorizedException();
       request.userId = id;
+      request.userRole = user.role as Role;
       return true;
     } catch { throw new UnauthorizedException('Token inválido o vencido'); }
   }

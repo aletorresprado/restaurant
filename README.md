@@ -4,11 +4,16 @@ Monorepo pnpm con API NestJS, validación Zod y tipos compartidos.
 
 ## Estado
 
-Implementado: registro de clientes, login, perfil autenticado, renovación de sesión con rotación de refresh tokens y logout. Usuarios y sesiones persisten en PostgreSQL con Prisma. El registro público siempre crea clientes; el administrador se crea mediante un comando explícito.
+Estado al 28 de octubre de 2026: API funcional en desarrollo local, con las etapas 1 a 4 completadas. El proyecto aún no está preparado para operar en producción y no tiene interfaz de usuario final.
 
-Pendiente: sucursales, mesas, horarios, reservas, fidelización y frontend. Los tipos y esquemas compartidos de esos módulos son una base, no endpoints implementados.
+- Identidad: registro, login, perfil, renovación y cierre de sesión con persistencia PostgreSQL/Prisma.
+- Organización: permisos por rol, sucursales y asignaciones de personal, con permisos consultados en cada petición.
+- Operación: mesas y estados, horarios semanales, excepciones y bloqueos, incluida conversión horaria y servicios nocturnos.
+- Reservas: disponibilidad, asignación automática, reservas propias, agenda del personal y cancelaciones con eventos y control de concurrencia.
 
-El [plan de desarrollo](docs/PLAN.md) detalla el orden de implementación y los criterios para completar cada etapa. La próxima etapa es implementar permisos por rol y gestión de sucursales.
+El registro público crea clientes; el administrador se crea mediante un comando explícito. Swagger permite probar la API durante el desarrollo.
+
+La próxima etapa es **asistencia y fidelización**, seguida de la interfaz y la preparación del despliegue. Ver el [plan de desarrollo](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md), que detalla tareas, decisiones y criterios de publicación pendientes.
 
 ## Requisitos
 
@@ -74,6 +79,44 @@ pnpm.cmd db:seed
 
 El comando crea un administrador y falla si ese correo ya existe; no eleva permisos de cuentas existentes. Quitar las variables de seed luego de usarlo.
 
+## Sucursales y permisos
+
+Ver [la guía de sucursales](docs/SUCURSALES.md) para el contrato de endpoints y el recorrido de administración en Swagger.
+
+- Consulta pública: `GET /api/v1/branches` y `GET /api/v1/branches/:id`, solo sucursales activas.
+- `ADMIN`: administra sucursales y asignaciones en `/api/v1/admin/branches`; consulta usuarios y cambia entre `CUSTOMER` y `STAFF` en `/api/v1/admin/users`.
+- `STAFF`: consulta sus sucursales activas asignadas en `/api/v1/staff/branches`. No puede modificar sucursales ni asignarse por sí mismo.
+- `CUSTOMER`: consulta la oferta pública; no accede a las rutas administrativas ni de personal.
+
+Las listas de sucursales y usuarios aceptan `page` y `limit` (20 registros por defecto, máximo 100) y devuelven `{ data, meta }`. Las asignaciones se consultan en una lista propia por sucursal.
+
+Desactivar una sucursal conserva sus datos y asignaciones; reactivarla permite nuevamente el acceso al personal asignado. Se rechaza la desactivación si tiene reservas confirmadas que aún no terminaron. Cambiar a una persona de `STAFF` a `CUSTOMER` elimina sus asignaciones. Los cambios de permisos tienen efecto con los tokens existentes. La API no permite crear ni modificar administradores mediante el endpoint de roles; se mantiene el comando de seed.
+
+## Mesas, horarios y bloqueos
+
+La [guía de operación](docs/OPERACION.md) detalla rutas, ejemplos y reglas de fechas. ADMIN puede configurar cualquier sucursal; STAFF solo sus sucursales activas asignadas.
+
+- Mesas: `/api/v1/staff/branches/:branchId/tables`, número único por sucursal, capacidad entre 1 y 50 y estado `ACTIVE`, `BLOCKED` u `OUT_OF_SERVICE`.
+- Horarios: `/api/v1/staff/branches/:branchId/schedules`, un servicio por día semanal, con cruce de medianoche y validación de solapamientos.
+- Excepciones: `/api/v1/staff/branches/:branchId/schedule-exceptions`, cierre o cambio de horario para una fecha local.
+- Bloqueos: `/api/v1/staff/branches/:branchId/tables/:tableId/blocks`, intervalos con zona horaria, almacenados en UTC; sin superposiciones en la misma mesa.
+- Consulta pública: `GET /api/v1/branches/:branchId/hours?date=2026-11-02`, devuelve el servicio iniciado en esa fecha, su origen y su ventana UTC. Para mesas libres usar la consulta de disponibilidad.
+
+Los intervalos se consideran `[inicio, fin)`: dos servicios o bloqueos pueden tocarse sin superponerse. Una excepción sustituye el servicio que inicia en su fecha; no recorta el servicio nocturno iniciado el día anterior. Por ahora no hay múltiples turnos por día ni eliminación permanente de mesas por HTTP.
+
+## Disponibilidad y reservas
+
+Ver [la guía de reservas](docs/RESERVAS.md) para ejemplos y políticas completas.
+
+- Público: `GET /api/v1/branches/:branchId/availability?date=2026-11-02&partySize=4`.
+- CUSTOMER: `POST /api/v1/reservations`, con `branchId`, `serviceDate`, `startAt` y `partySize`.
+- Usuario autenticado: `GET /api/v1/reservations`, `GET /api/v1/reservations/:id` y `POST /api/v1/reservations/:id/cancel`, únicamente para sus reservas.
+- Personal autorizado: agenda `GET /api/v1/staff/branches/:branchId/reservations?date=2026-11-02`, detalle por ID y cancelación del restaurante con motivo obligatorio.
+
+Duración de 120 minutos; una mesa por reserva, asignada por menor capacidad suficiente, sin combinar mesas. Se exige inicio futuro alineado con los turnos del servicio y fin dentro de su horario. El cliente cancela con al menos 6 horas de anticipación; el personal puede cancelar antes del inicio. No se envían notificaciones ni se implementa todavía reprogramación.
+
+La disponibilidad es orientativa: al confirmar se vuelve a comprobar bajo transacción. Se rechazan bloqueos, reducción de capacidad, cambios de estado o de horarios que invaliden reservas confirmadas vigentes. Los cambios operativos no cancelan reservas automáticamente.
+
 ## Validación
 
 ```powershell
@@ -83,9 +126,9 @@ pnpm.cmd lint
 pnpm.cmd --filter @repo/api exec prisma validate
 ```
 
-Las 11 pruebas cubren configuración, rotación, expiración y revocación de sesiones, además de registro, login y acceso autenticado mediante HTTP. El acceso a datos está simulado: no reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
+Las 15 pruebas cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas y cancelación. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
 
-Para probar contra una base real ya migrada, compilar y ejecutar `pnpm.cmd --filter @repo/api test:integration`. El comando inicia una API temporal en un puerto libre, comprueba registro, persistencia, login, perfil privado, renovación concurrente, cierre de sesión y desactivación. Al finalizar detiene esa API y elimina únicamente su usuario de prueba y sus sesiones. No ejecutarlo contra producción.
+Para probar contra una base real ya migrada, compilar y ejecutar `pnpm.cmd --filter @repo/api test:integration`. Comprueba autenticación, permisos y operación; además prueba disponibilidad, reserva concurrente, asignación por capacidad, privacidad, agenda, cancelación y protección de configuración. Inicia una API temporal y elimina sus propios usuarios, sesiones, sucursales y recursos asociados, incluidas reservas y eventos. No ejecutarlo contra producción.
 
 ## Instalación local de este equipo
 
@@ -107,4 +150,4 @@ Antes de exponer la API a internet, agregar límites de intentos de autenticaci�
 
 ## Cómo continuar el proyecto
 
-Seguir las etapas de [docs/PLAN.md](docs/PLAN.md). En cada cambio, actualizar este README con el comportamiento real, los comandos y las limitaciones que correspondan; actualizar también el plan cuando cambie el estado de una etapa. Registrar las validaciones realizadas antes de hacer commit y subir los cambios. No incluir archivos `.env`, credenciales ni logs en Git.
+Seguir las etapas de [docs/PLAN.md](docs/PLAN.md) y usar [docs/PRODUCCION.md](docs/PRODUCCION.md) como lista de salida a producción. En cada cambio, actualizar este README con el comportamiento real, los comandos y las limitaciones que correspondan; actualizar también el plan cuando cambie el estado de una etapa. Registrar las validaciones realizadas antes de hacer commit y subir los cambios. No incluir archivos `.env`, credenciales ni logs en Git.
