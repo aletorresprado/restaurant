@@ -4,7 +4,7 @@ Monorepo pnpm con API NestJS, validación Zod y tipos compartidos.
 
 ## Estado
 
-Estado al 28 de octubre de 2026: API funcional en desarrollo local, con las etapas 1 a 4 completadas. El proyecto aún no está preparado para operar en producción y no tiene interfaz de usuario final.
+Estado al 30 de octubre de 2026: API funcional en desarrollo local, con las etapas 1 a 4 completadas, y primera interfaz web de clientes conectada a la API. El proyecto aún no está preparado para operar en producción.
 
 - Identidad: registro, login, perfil, renovación y cierre de sesión con persistencia PostgreSQL/Prisma.
 - Organización: permisos por rol, sucursales y asignaciones de personal, con permisos consultados en cada petición.
@@ -13,7 +13,32 @@ Estado al 28 de octubre de 2026: API funcional en desarrollo local, con las etap
 
 El registro público crea clientes; el administrador se crea mediante un comando explícito. Swagger permite probar la API durante el desarrollo.
 
-La próxima etapa es **asistencia y fidelización**, seguida de la interfaz y la preparación del despliegue. Ver el [plan de desarrollo](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md), que detalla tareas, decisiones y criterios de publicación pendientes.
+El diseño del frontend se adaptó desde Lovable conservando nuestras reglas y autenticación. Están conectados sucursales, disponibilidad, registro/login, confirmación, reservas propias y cancelación. Ver [FRONTEND.md](docs/FRONTEND.md).
+
+Siguen pendientes **asistencia y fidelización**, las pantallas de personal/administración y la preparación del despliegue. Ver el [plan de desarrollo](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md).
+
+## Un proyecto, varias herramientas
+
+App Resto se desarrolla combinando aplicaciones y asistentes con responsabilidades complementarias, bajo la dirección de su propietario. El diseño visual y la implementación funcional se trabajaron en entornos distintos y luego se integraron en este proyecto.
+
+| Herramienta | Aporte al proyecto |
+| --- | --- |
+| Lovable | Diseño y prototipo navegable del frontend: identidad visual, pantallas del cliente, estilos y componentes reutilizables. |
+| GitHub | Versionado e intercambio del código entre el prototipo visual y el desarrollo de App Resto. |
+| Codex | Desarrollo de la API y adaptación del frontend, con apoyo de sus skills de trabajo, las instrucciones del repositorio y pruebas automatizadas. |
+| Playwright y herramientas de prueba | Verificación del recorrido integrado en escritorio y móvil contra PostgreSQL real. |
+
+El trabajo siguió este recorrido:
+
+1. Definimos las funciones y reglas del restaurante y desarrollamos la API propia.
+2. Llevamos ese contexto a Lovable mediante un prompt del proyecto y trabajamos allí el diseño de la interfaz.
+3. Publicamos el prototipo en [pixel-perfect-replica](https://github.com/aletorresprado/pixel-perfect-replica), que sirvió como punto de intercambio entre las herramientas.
+4. Desde Codex revisamos su código, componentes e instrucciones de trabajo y adaptamos el diseño a `apps/web`, conectándolo con nuestra API y sus validaciones compartidas.
+5. Reemplazamos los datos simulados por operaciones reales y verificamos registro, acceso, disponibilidad, confirmación y cancelación en navegador.
+
+El resultado conserva el lenguaje visual creado en Lovable y las reglas de negocio de App Resto. Las diferencias del prototipo se resolvieron en la interfaz: fechas, turnos, permisos y mensajes se ajustaron al comportamiento existente del backend.
+
+Esta colaboración se realiza mediante código versionado y adaptación explícita; los repositorios no se sincronizan automáticamente. La referencia de origen está registrada en [SOURCE.md](apps/web/SOURCE.md) y los detalles de integración en [FRONTEND.md](docs/FRONTEND.md).
 
 ## Requisitos
 
@@ -49,6 +74,16 @@ La API verifica las variables y conecta a PostgreSQL durante el arranque: sin un
 
 - Salud: http://localhost:3000/api/v1/health
 - Swagger interactivo: http://localhost:3000/api/docs
+
+Con la API configurada y el build inicial completo, `pnpm.cmd dev` inicia API y web. Si la API ya está encendida, usar `pnpm.cmd --filter @repo/web dev` para iniciar solo la interfaz en http://127.0.0.1:5173. La web consulta `/api/v1` mediante un proxy local. No se cargan datos ficticios al iniciar: una base sin sucursales activas muestra el estado vacío correspondiente.
+
+Para probar el recorrido en una base local vacía, ejecutar explícitamente:
+
+```powershell
+pnpm.cmd --filter @repo/api db:seed:dev
+```
+
+Crea una **Sucursal de prueba — Desarrollo**, tres mesas para 2, 4 y 6 personas y un servicio diario de 12:00 a 02:00 del día siguiente. Solo admite `NODE_ENV=development` y la base `app_resto_dev` en localhost. Se puede repetir: no duplica la sucursal ni sobrescribe sus cambios posteriores. No crea usuarios; registrarse desde la interfaz para reservar. Los datos son ficticios, quedan identificados como desarrollo y no deben usarse como configuración real del restaurante.
 
 Si la descarga del motor Prisma falla por certificados en Windows con Node 22.19+, probar `$env:NODE_USE_SYSTEM_CA='1'` antes de `pnpm.cmd db:generate`. No desactivar la validación TLS.
 
@@ -127,6 +162,8 @@ pnpm.cmd --filter @repo/api exec prisma validate
 ```
 
 Las 15 pruebas cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas y cancelación. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
+
+El frontend agrega pruebas de renovación de sesión, errores de conexión, logout y fechas; `pnpm.cmd test` incluye API y web. Para el recorrido real en navegador, después de compilar e instalar Chromium con `pnpm.cmd --filter @repo/web exec playwright install chromium`, ejecutar `pnpm.cmd --filter @repo/web test:e2e`. Usa PostgreSQL de desarrollo y recursos temporales propios. Detalles y límites de sesión en [FRONTEND.md](docs/FRONTEND.md).
 
 Para probar contra una base real ya migrada, compilar y ejecutar `pnpm.cmd --filter @repo/api test:integration`. Comprueba autenticación, permisos y operación; además prueba disponibilidad, reserva concurrente, asignación por capacidad, privacidad, agenda, cancelación y protección de configuración. Inicia una API temporal y elimina sus propios usuarios, sesiones, sucursales y recursos asociados, incluidas reservas y eventos. No ejecutarlo contra producción.
 

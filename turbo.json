@@ -1,7 +1,7 @@
 ﻿{
   "ui": "tui",
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"], "env": ["VITE_API_BASE_URL"] },
     "dev": { "cache": false, "persistent": true },
     "lint": { "dependsOn": ["^build"] },
     "format": { "cache": false },

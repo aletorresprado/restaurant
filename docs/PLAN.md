@@ -1,6 +1,6 @@
 # Plan de desarrollo de App Resto
 
-Actualizado: 28 de octubre de 2026.
+Actualizado: 30 de octubre de 2026.
 
 ## Objetivo
 
@@ -8,7 +8,7 @@ Construir un sistema de reservas y fidelización para un restaurante con varias 
 
 ## Estado y recorrido restante
 
-Las etapas 1 a 4 están implementadas y verificadas en desarrollo local. No hay despliegue productivo ni frontend. Para llegar a producción faltan, en este orden, cerrar asistencia y fidelización (5), completar los recorridos de la interfaz (6) y verificar seguridad, infraestructura y operación del despliegue (7).
+Las etapas 1 a 4 están implementadas y verificadas en desarrollo local. La etapa 6 se adelantó parcialmente para integrar el diseño de Lovable al recorrido real del cliente, sin cambiar las reglas del backend. No hay despliegue productivo. Faltan asistencia y fidelización (5), las áreas de personal y administración y el resto de la interfaz (6), y la preparación del despliegue (7).
 
 La [hoja de ruta a producción](PRODUCCION.md) desglosa esos pendientes, las decisiones del propietario y los criterios para publicar. Tener el código subido a GitHub o Swagger accesible localmente no completa la etapa de despliegue.
 
@@ -91,13 +91,18 @@ Criterio de cierre: un cliente completa una reserva real y puede consultarla o c
 
 Criterio de cierre: los eventos generan los puntos esperados una sola vez, incluso con reintentos; el cliente consulta su saldo e historial y el administrador puede auditar ajustes.
 
-## 6. Interfaz de clientes y personal — pendiente
+## 6. Interfaz de clientes y personal — en curso
 
-1. Acordar web adaptable o aplicación móvil, pantallas y alcance del primer lanzamiento.
-2. Implementar registro, login y manejo de sesión con almacenamiento de tokens apropiado a la plataforma elegida.
-3. Implementar selección de sucursal, fecha, horario, disponibilidad y confirmación de reserva.
-4. Implementar reservas propias, cancelaciones y consulta de fidelización.
-5. Implementar agenda y administración para los roles autorizados.
+- [x] Web adaptable en `apps/web`, basada en el diseño de Lovable y conectada a nuestra API.
+- [x] Registro/login, restauración y renovación de sesión y logout para la integración local.
+- [x] Sucursales reales, fecha de servicio, grupo, disponibilidad y confirmación sin cambiar reglas de negocio.
+- [x] Reservas propias, detalle, eventos y cancelación, con carga, errores y estados vacíos.
+- [x] Pruebas de cliente HTTP y recorrido de navegador en escritorio y móvil contra PostgreSQL.
+- [ ] Política de sesión entre pestañas y revisión del almacenamiento antes de producción.
+- [ ] Consulta de asistencia/fidelización, una vez completada la etapa 5.
+- [ ] Agenda y gestión de personal asignado, y administración global.
+
+Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual, pero se eliminan datos ficticios y funciones que nuestra API no ofrece. Ver [FRONTEND.md](FRONTEND.md) para procedencia, reglas de adaptación, arranque y verificación.
 
 Criterio de cierre: los recorridos principales funcionan desde la interfaz contra la API real, con estados de carga, errores, acceso por rol y uso en pantallas pequeñas.
 

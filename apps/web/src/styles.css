@@ -1,0 +1,128 @@
+@import 'tailwindcss' source(none);
+@source "../src";
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Figtree', system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+  --color-on-photo: var(--on-photo);
+}
+
+:root {
+  --radius: 0.75rem;
+  /* Marfil / carbón / oliva / terracota */
+  --background: oklch(0.975 0.012 85);
+  --foreground: oklch(0.24 0.012 60);
+  --card: oklch(0.99 0.008 85);
+  --card-foreground: oklch(0.24 0.012 60);
+  --popover: oklch(0.99 0.008 85);
+  --popover-foreground: oklch(0.24 0.012 60);
+  --primary: oklch(0.42 0.07 120);
+  --primary-foreground: oklch(0.98 0.01 85);
+  --primary-soft: oklch(0.93 0.035 115);
+  --secondary: oklch(0.945 0.018 80);
+  --secondary-foreground: oklch(0.28 0.02 60);
+  --muted: oklch(0.94 0.015 80);
+  --muted-foreground: oklch(0.47 0.015 60);
+  --accent: oklch(0.58 0.13 42);
+  --accent-foreground: oklch(0.98 0.01 85);
+  --accent-soft: oklch(0.93 0.04 50);
+  --destructive: oklch(0.5 0.17 28);
+  --destructive-foreground: oklch(0.98 0.01 85);
+  --destructive-soft: oklch(0.94 0.035 28);
+  --success: oklch(0.45 0.09 145);
+  --success-soft: oklch(0.93 0.04 145);
+  --warning: oklch(0.5 0.1 75);
+  --warning-soft: oklch(0.94 0.05 85);
+  --border: oklch(0.88 0.02 80);
+  --input: oklch(0.82 0.02 80);
+  --ring: oklch(0.42 0.07 120);
+  --overlay: oklch(0.18 0.01 60 / 0.55);
+  --on-photo: oklch(0.98 0.01 85);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+@utility photo-scrim {
+  background: linear-gradient(to top, var(--overlay), transparent 70%);
+}
+
+@utility fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

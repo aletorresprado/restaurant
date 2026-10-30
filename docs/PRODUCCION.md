@@ -1,12 +1,12 @@
 # Hoja de ruta a producción
 
-Actualizado: 28 de octubre de 2026.
+Actualizado: 30 de octubre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–4 del [plan](PLAN.md) están implementadas: autenticación, roles y sucursales, mesas/horarios/bloqueos, disponibilidad y reservas. La API usa PostgreSQL local y se prueba mediante Swagger. Hay cuatro migraciones versionadas, 15 pruebas automatizadas y una integración contra PostgreSQL que incluye concurrencia y aislamiento entre sucursales.
+Las etapas 1–4 del [plan](PLAN.md) están implementadas: autenticación, roles y sucursales, mesas/horarios/bloqueos, disponibilidad y reservas. Hay cuatro migraciones versionadas, 15 pruebas de API y una integración PostgreSQL con concurrencia y aislamiento entre sucursales. El frontend agrega 6 pruebas de cliente y dos recorridos de navegador contra la base real, en escritorio y móvil.
 
-La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. No hay todavía frontend, asistencia/fidelización, infraestructura de despliegue ni integración continua configurada.
+La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Ya existe una primera web de clientes conectada a la API; siguen pendientes las áreas de personal/administración, asistencia/fidelización, infraestructura e integración continua.
 
 ## 1. Completar asistencia y fidelización — etapa 5, pendiente
 
@@ -23,17 +23,19 @@ Cierre: el personal completa el ciclo de una reserva y los puntos resultantes so
 
 ## 2. Construir la interfaz — etapa 6, pendiente
 
-- [ ] Elegir web adaptable o aplicación móvil y acordar pantallas y prioridades. No hay tecnología de frontend elegida en el repositorio.
-- [ ] Diseñar acceso, recuperación de cuenta y persistencia/renovación de sesión apropiada a la plataforma.
-- [ ] Implementar sucursal, fecha de servicio, tamaño de grupo, turnos libres y confirmación.
+- [x] Web adaptable elegida: React/Vite, Tailwind y TanStack Router, adaptada del diseño de Lovable.
+- [x] Registro, login y sesión para integración local; quedan pendientes recuperación de cuenta y revisión de sesión entre pestañas/almacenamiento para producción.
+- [x] Sucursal, fecha de servicio, tamaño de grupo, turnos libres y confirmación conectados a la API.
 - [ ] Implementar reservas propias, cancelaciones, asistencia para el personal y fidelización.
 - [ ] Implementar administración de sucursales, asignaciones, mesas, horarios y bloqueos según rol.
 - [ ] Resolver resultados inciertos al reservar: hoy no existe clave de idempotencia y repetir el POST puede crear otra reserva si queda otra mesa. Definir idempotencia en la API o un mecanismo de reconciliación antes de habilitar reintentos en la interfaz.
-- [ ] Mostrar fechas en la zona del restaurante y explicar los servicios que cruzan medianoche.
+- [x] Mostrar fechas en la zona del restaurante y explicar los servicios que cruzan medianoche.
 - [ ] Verificar navegación con teclado, pantallas pequeñas, carga, errores, sesión vencida y turnos agotados durante la confirmación.
 - [ ] Probar recorridos completos de cliente, personal y administrador contra la API real.
 
 Cierre: una persona puede completar los recorridos del producto sin depender de Swagger, incluidos errores y recuperación de sesión.
+
+El recorrido del cliente ya está conectado y verificado en escritorio y móvil. Ver [FRONTEND.md](FRONTEND.md). El almacenamiento actual usa sessionStorage, no cookies HttpOnly; requiere revisión de seguridad y coordinación entre pestañas antes del lanzamiento. Las pruebas del cliente son un avance de esta etapa, no cierran las pantallas pendientes de personal/administración.
 
 ## 3. Preparar seguridad y operación — etapa 7, pendiente
 
