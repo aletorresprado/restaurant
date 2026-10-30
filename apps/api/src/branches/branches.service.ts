@@ -4,6 +4,7 @@ import { Role } from '@repo/shared-types';
 import { CreateBranchDto, UpdateBranchDto } from '@repo/validation';
 import { PrismaService } from '../database/prisma.service';
 import { BranchQuery } from './branches.schemas';
+import { occupyingStatuses } from '../reservations/rules';
 
 const staffFields = { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true } as const;
 
@@ -46,7 +47,7 @@ export class BranchesService {
     }
     try { return await this.db.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${id}::uuid FOR UPDATE`;
-      if (data.isActive === false && await tx.reservation.findFirst({ where: { branchId: id, status: 'CONFIRMED', endAt: { gt: new Date() } } })) throw new ConflictException('La sucursal tiene reservas confirmadas vigentes');
+      if (data.isActive === false && await tx.reservation.findFirst({ where: { branchId: id, status: { in: [...occupyingStatuses] }, endAt: { gt: new Date() } } })) throw new ConflictException('La sucursal tiene reservas vigentes');
       return tx.branch.update({ where: { id }, data });
     }); }
     catch (error) {

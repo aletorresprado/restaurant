@@ -1,9 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { AvailabilityQuery, CreateReservationDto } from '@repo/validation';
+import { AvailabilityQuery, CreateReservationDto, RecordAttendanceDto } from '@repo/validation';
 import { PrismaService } from '../database/prisma.service';
 import { OperationsService } from '../operations/operations.service';
-import { aligned, canCustomerCancel, durationMs, fits, overlaps } from './rules';
+import { aligned, canCustomerCancel, canRecordAttendance, durationMs, fits, occupyingStatuses, overlaps } from './rules';
 
 type Tx = Prisma.TransactionClient;
 type Page = { page: number; limit: number };
@@ -21,7 +21,7 @@ export class ReservationsService {
     const range = { startAt: { lt: hours.window.endAt }, endAt: { gt: hours.window.startAt } };
     const tables = await tx.restaurantTable.findMany({ where: { branchId, tableStatus: 'ACTIVE', capacity: { gte: partySize } }, orderBy: [{ capacity: 'asc' }, { tableNumber: 'asc' }, { id: 'asc' }] });
     const tableIds = tables.map(t => t.id);
-    const reservations = await tx.reservation.findMany({ where: { tableId: { in: tableIds }, status: 'CONFIRMED', ...range } });
+    const reservations = await tx.reservation.findMany({ where: { tableId: { in: tableIds }, status: { in: [...occupyingStatuses] }, ...range } });
     const blocks = await tx.tableBlock.findMany({ where: { tableId: { in: tableIds }, ...range } });
     return { hours, tables, reservations, blocks };
   }
@@ -92,6 +92,21 @@ export class ReservationsService {
       if (reservation.startAt <= now) throw new ConflictException('No se puede cancelar una reserva iniciada');
       if (!branchId && !canCustomerCancel(reservation.startAt, now)) throw new ForbiddenException('El cliente debe cancelar con al menos 6 horas de anticipación');
       return tx.reservation.update({ where: { id }, data: { status, events: { create: { actorId, type: branchId ? 'RESTAURANT_CANCELLED' : 'CUSTOMER_CANCELLED', reason } } }, include: details });
+    });
+  }
+
+  async recordAttendance(branchId: string, id: string, actorId: string, data: RecordAttendanceDto) {
+    return this.db.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${branchId}::uuid FOR UPDATE`;
+      const reservation = await tx.reservation.findFirst({ where: { id, branchId } });
+      if (!reservation) throw new NotFoundException('Reserva no encontrada en esta sucursal');
+      if (reservation.status === data.outcome) return tx.reservation.findUniqueOrThrow({ where: { id }, include: details });
+      if (reservation.status !== 'CONFIRMED') throw new ConflictException('Solo se puede registrar asistencia sobre una reserva confirmada; no se modifica un resultado ya registrado');
+      if (!canRecordAttendance(reservation.startAt, new Date(), data.outcome)) throw new ConflictException(data.outcome === 'NO_SHOW' ? 'Todavía no transcurrió la tolerancia configurada para registrar una ausencia' : 'La reserva todavía no comenzó');
+      return tx.reservation.update({ where: { id }, data: {
+        status: data.outcome,
+        events: { create: { actorId, type: data.outcome === 'ATTENDED' ? 'ATTENDANCE_CONFIRMED' : 'NO_SHOW_RECORDED', reason: data.reason } },
+      }, include: details });
     });
   }
 }

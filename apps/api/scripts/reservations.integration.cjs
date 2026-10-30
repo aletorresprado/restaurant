@@ -90,6 +90,7 @@ module.exports = async function reservationsIntegration({ api, db, branchId, oth
       partySize: 50, startAt: new Date(Date.now() + 3600000), endAt: new Date(Date.now() + 10800000) } });
     assert.equal((await api('POST', `reservations/${near.id}/cancel`, {}, token)).status, 403);
     assert.equal((await api('POST', `${root}/reservations/${near.id}/cancel`, { reason: 'Cancelación por personal' }, staffToken)).status, 200);
+    await require('./attendance.integration.cjs')({ api, db, staffToken, adminToken, customerToken: token, customerId: customer.body.user.id });
     console.log('OK: disponibilidad, reserva concurrente, mejor capacidad, privacidad, agenda, cancelación y protección de configuración.');
   } finally {
     await db.user.deleteMany({ where: { email } });

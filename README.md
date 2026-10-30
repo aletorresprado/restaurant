@@ -15,7 +15,7 @@ El registro público crea clientes; el administrador se crea mediante un comando
 
 El diseño del frontend se adaptó desde Lovable conservando nuestras reglas y autenticación. Están conectados sucursales, disponibilidad, registro/login, confirmación, reservas propias y cancelación. Ver [FRONTEND.md](docs/FRONTEND.md).
 
-Siguen pendientes **asistencia y fidelización**, las pantallas de personal/administración y la preparación del despliegue. Ver el [plan de desarrollo](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md).
+El registro de **asistencia y ausencia** ya está disponible en la API, con permisos e historial. Siguen pendientes los puntos y la fidelización, las pantallas de personal/administración y la preparación del despliegue. Ver el [plan de desarrollo](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md).
 
 ## Un proyecto, varias herramientas
 
@@ -152,6 +152,10 @@ Duración de 120 minutos; una mesa por reserva, asignada por menor capacidad suf
 
 La disponibilidad es orientativa: al confirmar se vuelve a comprobar bajo transacción. Se rechazan bloqueos, reducción de capacidad, cambios de estado o de horarios que invaliden reservas confirmadas vigentes. Los cambios operativos no cancelan reservas automáticamente.
 
+## Asistencia y ausencias
+
+El personal asignado o un administrador puede ejecutar `POST /api/v1/staff/branches/:branchId/reservations/:id/attendance` con `{ "outcome": "ATTENDED" }` o `{ "outcome": "NO_SHOW" }` y un motivo opcional. Asistencia desde el inicio; ausencia después de los 30 minutos de tolerancia configurados. Repetir el mismo resultado no duplica eventos y no se permite sobrescribir un resultado ya registrado. La asistencia mantiene ocupada la mesa hasta el fin previsto; la ausencia la libera. Por ahora no se suman ni descuentan puntos. Ver [ASISTENCIA.md](docs/ASISTENCIA.md).
+
 ## Validación
 
 ```powershell
@@ -161,7 +165,7 @@ pnpm.cmd lint
 pnpm.cmd --filter @repo/api exec prisma validate
 ```
 
-Las 15 pruebas cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas y cancelación. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
+Las 17 pruebas de API cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas, cancelación y tiempos de asistencia/ausencia. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
 
 El frontend agrega pruebas de renovación de sesión, errores de conexión, logout y fechas; `pnpm.cmd test` incluye API y web. Para el recorrido real en navegador, después de compilar e instalar Chromium con `pnpm.cmd --filter @repo/web exec playwright install chromium`, ejecutar `pnpm.cmd --filter @repo/web test:e2e`. Usa PostgreSQL de desarrollo y recursos temporales propios. Detalles y límites de sesión en [FRONTEND.md](docs/FRONTEND.md).
 

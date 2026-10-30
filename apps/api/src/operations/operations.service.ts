@@ -5,6 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 import { BranchesService } from '../branches/branches.service';
 import { UserRequest } from '../auth/access.guard';
 import { isoDay, nextDate, timezone, weeklyOverlap, windowFor } from './time';
+import { occupyingStatuses } from '../reservations/rules';
 
 type Tx = Prisma.TransactionClient;
 type Page = { page: number; limit: number };
@@ -38,7 +39,7 @@ export class OperationsService {
     return this.db.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${branchId}::uuid FOR UPDATE`;
       await this.table(tx, branchId, id);
-      const confirmed = await tx.reservation.findMany({ where: { tableId: id, status: 'CONFIRMED', endAt: { gt: new Date() } } });
+      const confirmed = await tx.reservation.findMany({ where: { tableId: id, status: { in: [...occupyingStatuses] }, endAt: { gt: new Date() } } });
       if (confirmed.some(r => (data.capacity !== undefined && data.capacity < r.partySize) || (data.tableStatus !== undefined && data.tableStatus !== 'ACTIVE'))) throw new ConflictException('La mesa tiene reservas confirmadas que impiden este cambio');
       return tx.restaurantTable.update({ where: { id }, data });
     });
@@ -56,7 +57,7 @@ export class OperationsService {
       await tx.$queryRaw`SELECT id FROM "RestaurantTable" WHERE id = ${tableId}::uuid FOR UPDATE`;
       await this.table(tx, branchId, tableId);
       const startAt = new Date(data.startAt), endAt = new Date(data.endAt);
-      if (await tx.reservation.findFirst({ where: { tableId, status: 'CONFIRMED', startAt: { lt: endAt }, endAt: { gt: startAt } } })) throw new ConflictException('El bloqueo entra en conflicto con una reserva confirmada');
+      if (await tx.reservation.findFirst({ where: { tableId, status: { in: [...occupyingStatuses] }, startAt: { lt: endAt }, endAt: { gt: startAt } } })) throw new ConflictException('El bloqueo entra en conflicto con una reserva vigente');
       if (await tx.tableBlock.findFirst({ where: { tableId, startAt: { lt: endAt }, endAt: { gt: startAt } } })) throw new ConflictException('El bloqueo se superpone con otro de la mesa');
       return tx.tableBlock.create({ data: { tableId, startAt, endAt, reason: data.reason } });
     });
@@ -99,7 +100,7 @@ export class OperationsService {
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${branchId}::uuid FOR UPDATE`;
       const result = await action(tx);
       await this.validateHours(tx, branchId);
-      const reservations = await tx.reservation.findMany({ where: { branchId, status: 'CONFIRMED', endAt: { gt: new Date() } } });
+      const reservations = await tx.reservation.findMany({ where: { branchId, status: { in: [...occupyingStatuses] }, endAt: { gt: new Date() } } });
       for (const reservation of reservations) {
         const hours = await this.resolved(tx, branchId, reservation.serviceDate);
         if (!hours.window || reservation.startAt < hours.window.startAt || reservation.endAt > hours.window.endAt) throw new ConflictException('El cambio deja una reserva confirmada fuera del horario');

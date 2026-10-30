@@ -8,7 +8,7 @@ Construir un sistema de reservas y fidelización para un restaurante con varias 
 
 ## Estado y recorrido restante
 
-Las etapas 1 a 4 están implementadas y verificadas en desarrollo local. La etapa 6 se adelantó parcialmente para integrar el diseño de Lovable al recorrido real del cliente, sin cambiar las reglas del backend. No hay despliegue productivo. Faltan asistencia y fidelización (5), las áreas de personal y administración y el resto de la interfaz (6), y la preparación del despliegue (7).
+Las etapas 1 a 4 están implementadas y verificadas en desarrollo local. La etapa 5 comenzó con registro de asistencia y ausencia en la API; faltan puntos y fidelización. La etapa 6 se adelantó parcialmente para integrar el diseño de Lovable al recorrido real del cliente. No hay despliegue productivo. Faltan completar 5, las áreas de personal/administración y el resto de la interfaz (6), y la preparación del despliegue (7).
 
 La [hoja de ruta a producción](PRODUCCION.md) desglosa esos pendientes, las decisiones del propietario y los criterios para publicar. Tener el código subido a GitHub o Swagger accesible localmente no completa la etapa de despliegue.
 
@@ -81,13 +81,18 @@ Decisiones: no se combinan mesas ni se permite elegir una mesa concreta desde el
 
 Criterio de cierre: un cliente completa una reserva real y puede consultarla o cancelarla según la política. Dos solicitudes simultáneas no pueden reservar la misma mesa en intervalos superpuestos. Cubrir horarios límite y zona horaria.
 
-## 5. Asistencia y fidelización — pendiente, próxima etapa
+## 5. Asistencia y fidelización — en curso; siguiente paso: puntos
 
-1. Registrar asistencia y ausencia con la tolerancia configurada.
-2. Persistir transacciones de puntos con trazabilidad y aplicación única por evento.
-3. Calcular saldo y nivel usando las reglas compartidas, sin saldo negativo.
-4. Implementar ajustes administrativos con motivo y autor.
-5. Definir el alcance de encuestas y sus recompensas antes de implementarlas.
+- [x] Asistencia desde el inicio y ausencia después de la tolerancia configurada, mediante endpoint de personal autorizado.
+- [x] Eventos con actor y motivo opcional, idempotencia y rechazo de resultados opuestos concurrentes.
+- [x] Preservar ocupación hasta el fin de una reserva ATTENDED; liberar mesa ante NO_SHOW.
+- [x] Pruebas de tiempos, permisos y concurrencia contra PostgreSQL. Sin migración nueva: estados y eventos ya existían.
+- [ ] Persistir transacciones de puntos con trazabilidad y aplicación única por evento.
+- [ ] Calcular saldo y nivel usando las reglas compartidas, sin saldo negativo.
+- [ ] Implementar ajustes administrativos con motivo y autor.
+- [ ] Definir encuestas y cómo aplicar los puntos a asistencias ya registradas antes de habilitar la fidelización.
+
+Decisiones actuales: registro manual desde Swagger; no se admite corregir un resultado terminal ni registrar asistencia anticipada. Los puntos aún no se aplican. Ver [ASISTENCIA.md](ASISTENCIA.md).
 
 Criterio de cierre: los eventos generan los puntos esperados una sola vez, incluso con reintentos; el cliente consulta su saldo e historial y el administrador puede auditar ajustes.
 

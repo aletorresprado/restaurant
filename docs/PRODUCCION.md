@@ -4,14 +4,14 @@ Actualizado: 30 de octubre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–4 del [plan](PLAN.md) están implementadas: autenticación, roles y sucursales, mesas/horarios/bloqueos, disponibilidad y reservas. Hay cuatro migraciones versionadas, 15 pruebas de API y una integración PostgreSQL con concurrencia y aislamiento entre sucursales. El frontend agrega 6 pruebas de cliente y dos recorridos de navegador contra la base real, en escritorio y móvil.
+Las etapas 1–4 del [plan](PLAN.md) están implementadas. La etapa 5 ya permite registrar asistencia y ausencia; faltan puntos y fidelización. Hay cuatro migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento y asistencia. El frontend agrega 6 pruebas de cliente y dos recorridos de navegador contra la base real, en escritorio y móvil.
 
-La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Ya existe una primera web de clientes conectada a la API; siguen pendientes las áreas de personal/administración, asistencia/fidelización, infraestructura e integración continua.
+La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Ya existe una primera web de clientes y registro de asistencia en la API; siguen pendientes personal/administración, puntos y fidelización, infraestructura e integración continua.
 
-## 1. Completar asistencia y fidelización — etapa 5, pendiente
+## 1. Completar asistencia y fidelización — etapa 5, en curso
 
-- [ ] Definir cuándo se permite marcar asistencia y cómo corregir un registro erróneo.
-- [ ] Implementar asistencia y NO_SHOW para personal autorizado, respetando la tolerancia configurada de 30 minutos para ausencia.
+- [ ] Definir correcciones auditables para un resultado de asistencia erróneo; hoy el primer resultado es definitivo.
+- [x] Asistencia y NO_SHOW para personal autorizado, respetando la tolerancia configurada de 30 minutos para ausencia.
 - [ ] Completar las transiciones de reservas para que no queden indefinidamente CONFIRMED después del servicio.
 - [ ] Crear el historial de transacciones de puntos, con relación al evento y autor, sin aplicar dos veces una recompensa o penalización ante reintentos.
 - [ ] Aplicar las constantes compartidas: asistencia +1, encuesta +2 si se incluye, ausencia -3 y saldo mínimo 0.
@@ -20,6 +20,8 @@ La base local, sus contraseñas y los logs no forman parte del repositorio. El s
 - [ ] Verificar concurrencia, permisos, correcciones y consistencia del saldo con PostgreSQL real.
 
 Cierre: el personal completa el ciclo de una reserva y los puntos resultantes son trazables y se aplican una sola vez. El cliente puede consultar su saldo e historial.
+
+El primer avance registra estados y eventos manualmente, sin correcciones posteriores ni puntos. Antes de activar fidelización se debe definir el tratamiento de esos eventos ya registrados, sin duplicar recompensas. Ver [ASISTENCIA.md](ASISTENCIA.md).
 
 ## 2. Construir la interfaz — etapa 6, pendiente
 
@@ -96,6 +98,6 @@ pnpm.cmd --filter @repo/api test:integration
 git diff --check
 ```
 
-La integración crea y elimina únicamente sus usuarios, sucursales y recursos asociados. Nunca apuntarla a producción. Actualmente cubre las etapas 1–4; debe ampliarse al implementar asistencia, puntos y la interfaz.
+La integración crea y elimina únicamente sus usuarios, sucursales y recursos asociados. Nunca apuntarla a producción. Cubre las etapas 1–4 y asistencia/ausencia de la etapa 5; faltan los casos de puntos. El frontend tiene sus propias pruebas de cliente y navegador.
 
 Para un despliegue futuro, generar Prisma y compilar durante la construcción de la versión, aplicar las migraciones versionadas con `pnpm.cmd --filter @repo/api db:deploy` y arrancar con `pnpm.cmd --filter @repo/api start`, adaptando el ejecutable de pnpm al sistema operativo. La configuración de hosting, TLS, supervisión y respaldo sigue pendiente: estos comandos solos no completan un despliegue.

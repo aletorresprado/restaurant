@@ -102,6 +102,8 @@ DELETE retira el bloqueo indicado; repetirlo devuelve 404. Cambiarlo requiere re
 
 ## Protección de reservas
 
+Los controles de ocupación y protección de configuración incluyen CONFIRMED y ATTENDED. Marcar asistencia no permite asignar otra reserva o bloqueo a esa mesa dentro del intervalo original. NO_SHOW ya no ocupa la mesa.
+
 La etapa de [reservas](RESERVAS.md) coordina operaciones mediante bloqueo de la sucursal. Se rechazan cambios de horario o excepciones que dejen reservas confirmadas vigentes fuera del servicio; también reducir capacidad por debajo del grupo o poner fuera de operación una mesa que tenga reservas confirmadas aún no terminadas. El intervalo de turnos puede cambiar sin alterar las reservas que ya estaban confirmadas, siempre que sigan dentro de la ventana del servicio. Cancelar o resolver las reservas afectadas antes de aplicar cambios incompatibles.
 
 ## Verificación

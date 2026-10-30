@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards, HttpCode, applyDecorators } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Role } from '@repo/shared-types';
-import { AvailabilityQuery, AvailabilityQuerySchema, CancelReservationSchema, CreateReservationDto, CreateReservationSchema } from '@repo/validation';
+import { AvailabilityQuery, AvailabilityQuerySchema, CancelReservationSchema, CreateReservationDto, CreateReservationSchema, RecordAttendanceDto, RecordAttendanceSchema } from '@repo/validation';
 import { z } from 'zod';
 import { AccessGuard, UserRequest } from '../auth/access.guard';
 import { Roles, RolesGuard } from '../auth/roles.guard';
@@ -60,6 +60,11 @@ export class StaffReservationsController {
   agenda(@Param('branchId', ParseUUIDPipe) branchId: string, @Query(new ZodPipe(AgendaQuery)) query: z.infer<typeof AgendaQuery>) { return this.reservations.agenda(branchId, query.date, query); }
   @Get(':id')
   find(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('id', ParseUUIDPipe) id: string) { return this.reservations.find(id, undefined, branchId); }
+  @Post(':id/attendance') @HttpCode(200)
+  @ApiOperation({ summary: 'Registrar asistencia desde el inicio o ausencia después de la tolerancia; sin puntos en esta etapa' })
+  @ApiBody({ schema: { type: 'object', required: ['outcome'], additionalProperties: false, properties: { outcome: { type: 'string', enum: ['ATTENDED', 'NO_SHOW'] }, reason: { type: 'string', minLength: 3, maxLength: 500 } } } })
+  attendance(@Req() request: UserRequest, @Param('branchId', ParseUUIDPipe) branchId: string, @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodPipe(RecordAttendanceSchema)) body: RecordAttendanceDto) { return this.reservations.recordAttendance(branchId, id, request.userId, body); }
   @Post(':id/cancel') @HttpCode(200)
   @ApiBody({ schema: { type: 'object', required: ['reason'], properties: { reason: { type: 'string', minLength: 3, maxLength: 500 } } } })
   cancel(@Req() request: UserRequest, @Param('branchId', ParseUUIDPipe) branchId: string, @Param('id', ParseUUIDPipe) id: string,

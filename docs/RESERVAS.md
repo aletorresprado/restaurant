@@ -41,7 +41,7 @@ Los listados de reservas devuelven `{ data, meta }`, 20 por página por defecto 
 
 - Grupos entre 1 y 50 personas; duración fija actual de 120 minutos desde `BUSINESS_CONFIG`.
 - Una mesa por reserva, sin combinaciones. Prioridad: menor capacidad suficiente, luego número de mesa y UUID. No se admite `tableId`, `userId`, duración ni estado enviados por el cliente.
-- Solo se ofrecen mesas ACTIVE de sucursales activas. Horarios, excepciones, bloqueos y reservas CONFIRMED determinan la disponibilidad.
+- Solo se ofrecen mesas ACTIVE de sucursales activas. Horarios, excepciones, bloqueos y reservas CONFIRMED o ATTENDED determinan la disponibilidad.
 - Se generan turnos desde la apertura, separados por `reservationIntervalMinutes`. El inicio debe ser futuro y coincidir exactamente con la grilla; la duración completa debe caber dentro del servicio. Se admite terminar exactamente al cierre.
 - Los instantes de inicio enviados requieren offset o Z; se almacenan y responden en UTC. La zona y la fecha de servicio siguen las reglas de operación.
 - La consulta devuelve `date`, `partySize`, `timezone`, `durationMinutes` y `slots`, con `startAt`, `endAt` y `availableTables`. No expone identidades de clientes ni IDs de mesas libres.
@@ -68,7 +68,7 @@ Son garantías de las rutas de la API; las escrituras SQL directas pueden eludir
 
 No se implementan reprogramación, elección de mesa por el cliente, reserva por cuenta de otro usuario, límites de reservas por persona, notificaciones, pagos, lista de espera ni una clave de idempotencia para creación. Un reintento de creación puede reservar otra mesa si queda cupo: consultar las reservas propias antes de repetir una petición cuyo resultado se desconoce.
 
-Las reservas aún no cambian automáticamente a ATTENDED o NO_SHOW. Esos estados y los puntos de fidelización pertenecen a la próxima etapa. Los clientes conservan acceso a sus reservas aunque una sucursal posteriormente deje de estar activa.
+Las reservas no cambian automáticamente a ATTENDED o NO_SHOW: el personal ya puede registrar esos resultados mediante la [API de asistencia](ASISTENCIA.md). Los puntos siguen pendientes. Los clientes conservan acceso a sus reservas aunque una sucursal posteriormente deje de estar activa. ATTENDED mantiene la mesa ocupada hasta el fin previsto y NO_SHOW libera la mesa.
 
 ## Validación
 
