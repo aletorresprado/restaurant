@@ -34,9 +34,9 @@ Errores: 400 para datos inválidos, 401 sin autenticación, 403 sin rol o asigna
 
 ## Alcance y continuación
 
-El frontend del cliente ya interpreta ATTENDED y NO_SHOW, pero la acción del personal se realiza por Swagger hasta construir sus pantallas. La asistencia no genera puntos ni penalizaciones en esta entrega.
+El frontend del cliente interpreta ATTENDED y NO_SHOW. El personal ya puede registrar el resultado desde la [agenda web](GESTION-WEB.md), además de Swagger. Desde el 3 de noviembre de 2026, registrar una nueva asistencia o ausencia también genera su movimiento de puntos dentro de la misma transacción.
 
-El siguiente paso es el historial de puntos con aplicación única por evento, saldo, nivel y ajustes administrativos. Debe definirse cómo tratar los eventos anteriores a esa activación y las correcciones auditables sin duplicar movimientos. La etapa 5 sigue abierta.
+La etapa 5 se completa con saldo, nivel, movimientos únicos, encuestas y ajustes administrativos auditados. Las asistencias y ausencias anteriores no se recalculan ni generan puntos al reintentar. Ver [FIDELIZACION.md](FIDELIZACION.md) para activación, tratamiento del historial y pruebas.
 
 ## Verificación
 

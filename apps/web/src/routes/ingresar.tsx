@@ -3,15 +3,18 @@ import { useState, type FormEvent } from 'react';
 import { LoginSchema, RegisterSchema } from '@repo/validation';
 import { Button, Container, Field, Notice, Stepper, inputClass } from '@/components/kit';
 import { useStore } from '@/lib/store';
-import { errorMessage } from '@/lib/api';
+import { errorMessage, getSession } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 export const Route = createFileRoute('/ingresar')({
   validateSearch: (
     value: Record<string, unknown>,
-  ): { continuar?: 'confirmar' | 'mis-reservas' } => ({
+  ): { continuar?: 'confirmar' | 'mis-reservas' | 'personal' | 'administracion' } => ({
     continuar:
-      value.continuar === 'confirmar' || value.continuar === 'mis-reservas'
+      value.continuar === 'confirmar' ||
+      value.continuar === 'mis-reservas' ||
+      value.continuar === 'personal' ||
+      value.continuar === 'administracion'
         ? value.continuar
         : undefined,
   }),
@@ -48,7 +51,18 @@ function Login() {
     setLoading(true);
     try {
       await signIn(mode, result.data);
-      await navigate({ to: continuar === 'confirmar' && pending ? '/confirmar' : '/mis-reservas' });
+      const role = getSession()?.user.role;
+      const destination =
+        role === 'ADMIN'
+          ? continuar === 'personal'
+            ? '/personal'
+            : '/administracion'
+          : role === 'STAFF'
+            ? '/personal'
+            : continuar === 'confirmar' && pending
+              ? '/confirmar'
+              : '/mis-reservas';
+      await navigate({ to: destination });
     } catch (error) {
       setError(errorMessage(error));
     } finally {

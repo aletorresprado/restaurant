@@ -6,16 +6,19 @@ El repositorio de Lovable permanece separado y sin modificaciones. Esta integrac
 
 ## Alcance
 
+Actualización del 3 de noviembre de 2026: agenda y administración verificadas con compilación, tipos, 23 pruebas de API/web y cuatro recorridos de navegador aprobados, incluidos roles, puntos y reintentos después de una respuesta de red perdida. Detalles en [GESTION-WEB.md](GESTION-WEB.md).
+
 - Inicio con sucursales activas reales; carga, error, reintento y estado vacío.
 - Consulta pública de disponibilidad por sucursal, fecha de servicio y grupo.
 - Registro y login reales usando los esquemas de validación compartidos.
 - Conservación de la selección durante el acceso y al recargar la pestaña.
 - Confirmación, referencia UUID y detalle con eventos de la API.
 - Mis reservas paginado, incluyendo anteriores y canceladas.
+- Desde el 3 de noviembre de 2026: saldo, nivel e historial de puntos paginado en Mis reservas; encuesta de calificación para visitas con asistencia y finalizadas, con recompensa única y persistencia al recargar. Ver [FIDELIZACION.md](FIDELIZACION.md).
 - Cancelación con confirmación y motivo opcional, según la regla vigente del backend.
 - Restauración de sesión, renovación coordinada por pestaña y logout con revocación del refresh token.
 
-No hay pantallas de personal o administración en esta entrega. Las cuentas de esos roles pueden iniciar sesión y consultar sus propias reservas, pero la confirmación de nuevas reservas sigue reservada al rol CUSTOMER. El personal mantiene Swagger como herramienta de operación hasta implementar su interfaz.
+Desde el 3 de noviembre hay agenda para STAFF/ADMIN y administración de usuarios, asignaciones y puntos para ADMIN. El login dirige al área del rol; la confirmación de nuevas reservas sigue reservada a CUSTOMER. Ver [GESTION-WEB.md](GESTION-WEB.md). La configuración web de sucursales, mesas, horarios y bloqueos sigue pendiente.
 
 ## Inicio local
 

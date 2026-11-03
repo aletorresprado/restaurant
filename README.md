@@ -4,7 +4,7 @@ Monorepo pnpm con API NestJS, validación Zod y tipos compartidos.
 
 ## Estado
 
-Estado al 30 de octubre de 2026: API funcional en desarrollo local, con las etapas 1 a 4 completadas, y primera interfaz web de clientes conectada a la API. El proyecto aún no está preparado para operar en producción.
+Estado al 3 de noviembre de 2026: API funcional en desarrollo local, con las etapas 1 a 5 completadas, y primera interfaz web de clientes conectada a la API, incluidos puntos y encuestas. El proyecto aún no está preparado para operar en producción.
 
 - Identidad: registro, login, perfil, renovación y cierre de sesión con persistencia PostgreSQL/Prisma.
 - Organización: permisos por rol, sucursales y asignaciones de personal, con permisos consultados en cada petición.
@@ -15,7 +15,7 @@ El registro público crea clientes; el administrador se crea mediante un comando
 
 El diseño del frontend se adaptó desde Lovable conservando nuestras reglas y autenticación. Están conectados sucursales, disponibilidad, registro/login, confirmación, reservas propias y cancelación. Ver [FRONTEND.md](docs/FRONTEND.md).
 
-El registro de **asistencia y ausencia** ya está disponible en la API, con permisos e historial. Siguen pendientes los puntos y la fidelización, las pantallas de personal/administración y la preparación del despliegue. Ver el [plan de desarrollo](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md).
+El registro de **asistencia y ausencia** aplica puntos de forma transaccional y auditable: asistencia +1, encuesta +2 y ausencia −3, con saldo mínimo cero. **Mis reservas** muestra saldo, nivel e historial; una visita con asistencia ya finalizada permite responder su encuesta. STAFF/ADMIN operan desde **Agenda** y ADMIN gestiona usuarios, asignaciones y ajustes auditados desde **Administración**. Los eventos anteriores no se recalculan automáticamente. Ver [FIDELIZACION.md](docs/FIDELIZACION.md) y [GESTION-WEB.md](docs/GESTION-WEB.md). Siguen pendientes los formularios de configuración operativa y la preparación del despliegue, detalladas en el [plan](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md).
 
 ## Un proyecto, varias herramientas
 
@@ -154,7 +154,17 @@ La disponibilidad es orientativa: al confirmar se vuelve a comprobar bajo transa
 
 ## Asistencia y ausencias
 
-El personal asignado o un administrador puede ejecutar `POST /api/v1/staff/branches/:branchId/reservations/:id/attendance` con `{ "outcome": "ATTENDED" }` o `{ "outcome": "NO_SHOW" }` y un motivo opcional. Asistencia desde el inicio; ausencia después de los 30 minutos de tolerancia configurados. Repetir el mismo resultado no duplica eventos y no se permite sobrescribir un resultado ya registrado. La asistencia mantiene ocupada la mesa hasta el fin previsto; la ausencia la libera. Por ahora no se suman ni descuentan puntos. Ver [ASISTENCIA.md](docs/ASISTENCIA.md).
+El personal asignado o un administrador puede ejecutar `POST /api/v1/staff/branches/:branchId/reservations/:id/attendance` con `{ "outcome": "ATTENDED" }` o `{ "outcome": "NO_SHOW" }` y un motivo opcional. Asistencia desde el inicio; ausencia después de los 30 minutos de tolerancia configurados. Repetir el mismo resultado no duplica eventos ni puntos y no se permite sobrescribir un resultado ya registrado. La asistencia mantiene ocupada la mesa hasta el fin previsto; la ausencia la libera. Ver [ASISTENCIA.md](docs/ASISTENCIA.md) y [FIDELIZACION.md](docs/FIDELIZACION.md).
+
+La fidelización agrega la quinta migración, `20261103000100_loyalty`. Para actualizar otra instalación de desarrollo, ejecutar `pnpm.cmd --filter @repo/api db:generate`, `pnpm.cmd --filter @repo/api db:deploy` y `pnpm.cmd build`, antes de reiniciar los servicios. No requiere contratar servicios adicionales.
+
+### Agenda y administración web
+
+Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 3 de noviembre** en [docs/PLAN.md](docs/PLAN.md): primero formularios de sucursales y luego mesas, horarios, excepciones y bloqueos; después revisión de sesiones y preparación productiva.
+
+Las cuentas STAFF ingresan a **Agenda** (`/personal`): sucursal asignada, fecha de servicio, reservas, asistencia, ausencia, cancelación e historial. Las cuentas ADMIN también acceden a **Administración** (`/administracion`): usuarios, cambios CUSTOMER/STAFF, asignaciones de personal, saldo y ajustes de puntos auditados. El login dirige al área del rol; la API conserva todas las validaciones y permisos.
+
+Si solo hay cuentas de cliente, crear un administrador separado con `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-admin.ps1` desde la raíz. Pide un correo nuevo y una contraseña oculta; no cambia cuentas existentes ni guarda credenciales en archivos. Luego salir de la app e ingresar con esa cuenta. Ver [GESTION-WEB.md](docs/GESTION-WEB.md) para uso, pruebas y límites. Los formularios web de sucursales, mesas, horarios y bloqueos siguen pendientes.
 
 ## Validación
 

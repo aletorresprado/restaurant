@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { BUSINESS_CONFIG } from '@repo/config';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { AvailabilityQuery, CreateReservationDto, RecordAttendanceDto } from '@repo/validation';
 import { PrismaService } from '../database/prisma.service';
 import { OperationsService } from '../operations/operations.service';
@@ -11,7 +13,7 @@ const details = { table: { select: { tableNumber: true } }, branch: { select: { 
 
 @Injectable()
 export class ReservationsService {
-  constructor(private readonly db: PrismaService, private readonly operations: OperationsService) {}
+  constructor(private readonly db: PrismaService, private readonly operations: OperationsService, private readonly loyalty: LoyaltyService) {}
 
   private async context(tx: Tx, branchId: string, date: string, partySize: number) {
     const branch = await tx.branch.findFirst({ where: { id: branchId, isActive: true } });
@@ -103,6 +105,7 @@ export class ReservationsService {
       if (reservation.status === data.outcome) return tx.reservation.findUniqueOrThrow({ where: { id }, include: details });
       if (reservation.status !== 'CONFIRMED') throw new ConflictException('Solo se puede registrar asistencia sobre una reserva confirmada; no se modifica un resultado ya registrado');
       if (!canRecordAttendance(reservation.startAt, new Date(), data.outcome)) throw new ConflictException(data.outcome === 'NO_SHOW' ? 'Todavía no transcurrió la tolerancia configurada para registrar una ausencia' : 'La reserva todavía no comenzó');
+      await this.loyalty.apply(tx, { userId: reservation.userId, actorId, sourceKey: `attendance:${id}`, kind: data.outcome === 'ATTENDED' ? 'ATTENDANCE' : 'NO_SHOW', requestedPoints: data.outcome === 'ATTENDED' ? BUSINESS_CONFIG.loyalty.attendanceReward : -BUSINESS_CONFIG.loyalty.noShowPenalty, reservationId: id, reason: data.reason });
       return tx.reservation.update({ where: { id }, data: {
         status: data.outcome,
         events: { create: { actorId, type: data.outcome === 'ATTENDED' ? 'ATTENDANCE_CONFIRMED' : 'NO_SHOW_RECORDED', reason: data.reason } },

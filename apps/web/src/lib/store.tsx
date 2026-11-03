@@ -49,7 +49,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onSessionChange(() => {
       setUser(getSession()?.user ?? null);
       client.removeQueries({
-        predicate: (q) => q.queryKey[0] === 'reservations' || q.queryKey[0] === 'reservation',
+        predicate: (q) =>
+          q.queryKey[0] === 'reservations' ||
+          q.queryKey[0] === 'reservation' ||
+          q.queryKey[0] === 'loyalty' ||
+          q.queryKey[0] === 'management',
       });
     });
     restoreSession();

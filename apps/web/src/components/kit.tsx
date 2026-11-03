@@ -214,11 +214,33 @@ export function SiteHeader() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
-      <Container className="flex h-16 items-center justify-between gap-4">
+      <Container className="flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
         <Link to="/" className="font-display text-xl font-semibold tracking-tight">
           App <span className="text-accent">Resto</span>
         </Link>
-        <nav className="flex items-center gap-1 text-sm" aria-label="Principal">
+        <nav className="flex flex-wrap items-center gap-1 text-sm" aria-label="Principal">
+          {(user?.role === 'STAFF' || user?.role === 'ADMIN') && (
+            <Link
+              to="/personal"
+              className={cn(
+                'rounded-full px-3 py-2 hover:bg-secondary',
+                path === '/personal' && 'bg-secondary font-semibold',
+              )}
+            >
+              Agenda
+            </Link>
+          )}
+          {user?.role === 'ADMIN' && (
+            <Link
+              to="/administracion"
+              className={cn(
+                'rounded-full px-3 py-2 hover:bg-secondary',
+                path === '/administracion' && 'bg-secondary font-semibold',
+              )}
+            >
+              Administración
+            </Link>
+          )}
           <Link
             to="/mis-reservas"
             className={cn(

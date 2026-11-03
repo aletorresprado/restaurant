@@ -17,6 +17,7 @@ import { useStore } from '@/lib/store';
 import { errorMessage, post, type Reservation } from '@/lib/api';
 import { canCancel, cancelDeadline, eventLabel, formatDateTime } from '@/lib/format';
 import { cancellationPolicy } from '@/lib/presentation';
+import { ReservationSurvey } from '@/components/Loyalty';
 export const Route = createFileRoute('/mis-reservas/$id')({
   head: () => ({
     meta: [{ title: 'Detalle de reserva — App Resto' }, { name: 'robots', content: 'noindex' }],
@@ -129,6 +130,7 @@ function Detail() {
           </Notice>
         )}
         <ReservationSummary {...reservation} />
+        {reservation.status === 'ATTENDED' && <ReservationSurvey key={id} id={id} />}
         {reservation.status === 'CONFIRMED' &&
           (canCancel(reservation.startAt) ? (
             <section className="rounded-xl border border-border p-4 text-sm">

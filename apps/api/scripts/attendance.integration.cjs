@@ -53,6 +53,7 @@ module.exports = async function attendanceIntegration({ api, db, staffToken, adm
     const event = await db.reservationEvent.findMany({ where: { reservationId: attended.id, type: 'ATTENDANCE_CONFIRMED' } });
     assert.equal(event.length, 1);
     assert.equal(event[0].actorId, staff.body.id);
+    assert.equal(await db.loyaltyMovement.count({ where: { sourceKey: `attendance:${attended.id}` } }), 1);
     assert.equal((await api('POST', endpoint(attended.id), { outcome: 'NO_SHOW' }, staffToken)).status, 409);
     assert.equal((await api('POST', `${root}/reservations/${attended.id}/cancel`, { reason: 'No corresponde' }, staffToken)).status, 409);
     assert.equal((await api('POST', `${root}/tables/${table50.id}/blocks`, { startAt: attended.startAt.toISOString(), endAt: attended.endAt.toISOString(), reason: 'Conflicto con asistencia' }, staffToken)).status, 409);
@@ -76,6 +77,7 @@ module.exports = async function attendanceIntegration({ api, db, staffToken, adm
     ]);
     assert.deepEqual(competing.map(r => r.status).sort(), [200, 409]);
     assert.equal(await db.reservationEvent.count({ where: { reservationId: race.id } }), 2);
+    await require('./loyalty.integration.cjs')({ api, db, fixture, endpoint, adminToken, staffToken, customerToken, customerId });
     console.log('OK: asistencia y ausencia, permisos, tolerancia, eventos únicos, ocupación e idempotencia concurrente.');
   } finally { await db.branch.deleteMany({ where: { id: branch.id } }); }
 };

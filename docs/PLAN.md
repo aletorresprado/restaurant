@@ -1,6 +1,6 @@
 # Plan de desarrollo de App Resto
 
-Actualizado: 30 de octubre de 2026.
+Actualizado: 3 de noviembre de 2026.
 
 ## Objetivo
 
@@ -8,7 +8,7 @@ Construir un sistema de reservas y fidelización para un restaurante con varias 
 
 ## Estado y recorrido restante
 
-Las etapas 1 a 4 están implementadas y verificadas en desarrollo local. La etapa 5 comenzó con registro de asistencia y ausencia en la API; faltan puntos y fidelización. La etapa 6 se adelantó parcialmente para integrar el diseño de Lovable al recorrido real del cliente. No hay despliegue productivo. Faltan completar 5, las áreas de personal/administración y el resto de la interfaz (6), y la preparación del despliegue (7).
+Las etapas 1 a 5 están implementadas y verificadas en desarrollo local. La etapa 5 incorpora movimientos de puntos, saldo, niveles, encuestas y ajustes auditados. La etapa 6 integra el diseño de Lovable al recorrido real del cliente, agenda del personal y administración de usuarios, asignaciones y puntos. No hay despliegue productivo. Faltan los formularios de configuración operativa y la revisión de sesiones (6), y la preparación del despliegue (7).
 
 La [hoja de ruta a producción](PRODUCCION.md) desglosa esos pendientes, las decisiones del propietario y los criterios para publicar. Tener el código subido a GitHub o Swagger accesible localmente no completa la etapa de despliegue.
 
@@ -81,18 +81,20 @@ Decisiones: no se combinan mesas ni se permite elegir una mesa concreta desde el
 
 Criterio de cierre: un cliente completa una reserva real y puede consultarla o cancelarla según la política. Dos solicitudes simultáneas no pueden reservar la misma mesa en intervalos superpuestos. Cubrir horarios límite y zona horaria.
 
-## 5. Asistencia y fidelización — en curso; siguiente paso: puntos
+## 5. Asistencia y fidelización — completada
 
 - [x] Asistencia desde el inicio y ausencia después de la tolerancia configurada, mediante endpoint de personal autorizado.
 - [x] Eventos con actor y motivo opcional, idempotencia y rechazo de resultados opuestos concurrentes.
 - [x] Preservar ocupación hasta el fin de una reserva ATTENDED; liberar mesa ante NO_SHOW.
 - [x] Pruebas de tiempos, permisos y concurrencia contra PostgreSQL. Sin migración nueva: estados y eventos ya existían.
-- [ ] Persistir transacciones de puntos con trazabilidad y aplicación única por evento.
-- [ ] Calcular saldo y nivel usando las reglas compartidas, sin saldo negativo.
-- [ ] Implementar ajustes administrativos con motivo y autor.
-- [ ] Definir encuestas y cómo aplicar los puntos a asistencias ya registradas antes de habilitar la fidelización.
+- [x] Persistir transacciones de puntos con trazabilidad y aplicación única por evento.
+- [x] Calcular saldo y nivel usando las reglas compartidas, sin saldo negativo.
+- [x] Implementar ajustes administrativos con motivo, autor y UUID de operación para reintentos.
+- [x] Encuesta de calificación 1–5, propia, una vez por reserva con asistencia y finalizada; recompensa +2.
+- [x] Activación sin recalcular asistencias/ausencias históricas; reconocimiento anterior mediante ajustes explícitos.
+- [x] Quinta migración aplicada e integración real de puntos, niveles, encuestas y ajustes con concurrencia.
 
-Decisiones actuales: registro manual desde Swagger; no se admite corregir un resultado terminal ni registrar asistencia anticipada. Los puntos aún no se aplican. Ver [ASISTENCIA.md](ASISTENCIA.md).
+Decisiones: asistencia manual desde la agenda web o Swagger; no se admite corregir un resultado terminal ni registrar asistencia anticipada. Puntos +1/+2/−3 con mínimo cero y nivel calculado según saldo actual. No hay canjes ni vencimiento. Ver [ASISTENCIA.md](ASISTENCIA.md) y [FIDELIZACION.md](FIDELIZACION.md). Correcciones de estados y automatización de ausencias quedan como mejoras separadas; los ajustes administrativos corrigen puntos.
 
 Criterio de cierre: los eventos generan los puntos esperados una sola vez, incluso con reintentos; el cliente consulta su saldo e historial y el administrador puede auditar ajustes.
 
@@ -104,10 +106,12 @@ Criterio de cierre: los eventos generan los puntos esperados una sola vez, inclu
 - [x] Reservas propias, detalle, eventos y cancelación, con carga, errores y estados vacíos.
 - [x] Pruebas de cliente HTTP y recorrido de navegador en escritorio y móvil contra PostgreSQL.
 - [ ] Política de sesión entre pestañas y revisión del almacenamiento antes de producción.
-- [ ] Consulta de asistencia/fidelización, una vez completada la etapa 5.
-- [ ] Agenda y gestión de personal asignado, y administración global.
+- [x] Consulta de asistencia en detalle, saldo/nivel/historial en Mis reservas y encuesta tras una visita finalizada.
+- [x] Agenda de sucursales autorizadas, asistencia, ausencia, cancelación e historial desde la web.
+- [x] Administración de usuarios CUSTOMER/STAFF, asignaciones y fidelización con ajustes auditados y reintentos seguros en la misma pestaña.
+- [ ] Formularios de altas/edición/desactivación de sucursales, mesas, horarios, excepciones y bloqueos.
 
-Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual, pero se eliminan datos ficticios y funciones que nuestra API no ofrece. Ver [FRONTEND.md](FRONTEND.md) para procedencia, reglas de adaptación, arranque y verificación.
+Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual, pero se eliminan datos ficticios y funciones que nuestra API no ofrece. Ver [FRONTEND.md](FRONTEND.md) para procedencia y [GESTION-WEB.md](GESTION-WEB.md) para agenda, administración y verificación. La etapa 6 sigue abierta por configuración operativa y revisión de sesiones.
 
 Criterio de cierre: los recorridos principales funcionan desde la interfaz contra la API real, con estados de carga, errores, acceso por rol y uso en pantallas pequeñas.
 
@@ -124,6 +128,22 @@ Criterio de cierre: despliegue reproducible con configuración separada, respald
 
 Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye seguridad de autenticación, reconciliación de reintentos de reserva, CI, entorno de prueba, migraciones, restauración y validación del primer lanzamiento. Todos esos controles de publicación siguen pendientes.
 
+## Punto de reanudación — cierre del 3 de noviembre de 2026
+
+Entrega actual: fidelización persistente y agenda/administración web. Documentación de uso y decisiones en [FIDELIZACION.md](FIDELIZACION.md) y [GESTION-WEB.md](GESTION-WEB.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
+
+Para retomar, seguir este orden:
+
+1. Iniciar `pnpm.cmd dev` y comprobar el acceso con una cuenta ADMIN. Si no existe, ejecutar el comando interactivo de `GESTION-WEB.md`; no promover cuentas directamente en la base ni guardar credenciales en Git.
+2. Completar en Administración las altas, edición y desactivación de sucursales, usando los endpoints existentes y mostrando conflictos por reservas vigentes.
+3. Agregar gestión de mesas y estados, horarios semanales, excepciones por fecha y bloqueos desde sucursales autorizadas. Mantener zona del restaurante, cruce de medianoche y validaciones de la API.
+4. Ampliar los recorridos de navegador para esa configuración, incluyendo permisos, conflictos y pantallas pequeñas. Actualizar README y este plan con cada entrega.
+5. Resolver sesiones/operaciones entre pestañas y continuar con los controles de producción de la etapa 7. No marcar la etapa 6 completa antes de cubrir los formularios pendientes y su verificación.
+
+Verificado en esta entrega: compilación, chequeo de tipos, 17 pruebas de API y 6 de web, integración PostgreSQL de puntos/asistencia y cuatro recorridos Playwright (cliente y gestión, escritorio y móvil). Incluyen respuesta perdida de un ajuste y reintento tras recargar sin duplicar movimientos. El script de creación de administrador se validó sintácticamente; la creación de cuentas permanentes queda como acción explícita del propietario.
+
+Límites que deben conservarse visibles: resultados de asistencia definitivos, ausencia manual, historial anterior sin recalcular automáticamente, sin canjes ni vencimiento de puntos, sin coordinación de ajustes entre pestañas y sin recuperación/verificación de correo. Ver la hoja de ruta antes de publicar.
+
 ## Comandos de comprobación
 
 Desde la raíz del repositorio:
@@ -134,6 +154,7 @@ pnpm.cmd test
 pnpm.cmd lint
 pnpm.cmd --filter @repo/api exec prisma validate
 pnpm.cmd --filter @repo/api test:integration
+pnpm.cmd --filter @repo/web test:e2e
 git diff --check
 ```
 

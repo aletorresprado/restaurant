@@ -1,35 +1,37 @@
 # Hoja de ruta a producción
 
-Actualizado: 30 de octubre de 2026.
+Actualizado: 3 de noviembre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–4 del [plan](PLAN.md) están implementadas. La etapa 5 ya permite registrar asistencia y ausencia; faltan puntos y fidelización. Hay cuatro migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento y asistencia. El frontend agrega 6 pruebas de cliente y dos recorridos de navegador contra la base real, en escritorio y móvil.
+Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay cinco migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas y ajustes. El frontend agrega 6 pruebas de cliente y cuatro recorridos de navegador aprobados contra la base real: cliente y gestión en escritorio y móvil, incluidos fidelización, roles y reintentos de ajustes.
 
-La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Ya existe una primera web de clientes y registro de asistencia en la API; siguen pendientes personal/administración, puntos y fidelización, infraestructura e integración continua.
+La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones y puntos; siguen pendientes los formularios de configuración operativa, infraestructura e integración continua.
 
-## 1. Completar asistencia y fidelización — etapa 5, en curso
+## 1. Asistencia y fidelización — etapa 5 completada; mejoras operativas pendientes
 
 - [ ] Definir correcciones auditables para un resultado de asistencia erróneo; hoy el primer resultado es definitivo.
 - [x] Asistencia y NO_SHOW para personal autorizado, respetando la tolerancia configurada de 30 minutos para ausencia.
 - [ ] Completar las transiciones de reservas para que no queden indefinidamente CONFIRMED después del servicio.
-- [ ] Crear el historial de transacciones de puntos, con relación al evento y autor, sin aplicar dos veces una recompensa o penalización ante reintentos.
-- [ ] Aplicar las constantes compartidas: asistencia +1, encuesta +2 si se incluye, ausencia -3 y saldo mínimo 0.
-- [ ] Exponer saldo, nivel e historial propios, y ajustes de administrador con motivo obligatorio.
-- [ ] Acordar si encuestas y recompensas entran en el primer lanzamiento o quedan explícitamente fuera de su alcance.
-- [ ] Verificar concurrencia, permisos, correcciones y consistencia del saldo con PostgreSQL real.
+- [x] Crear el historial de transacciones de puntos, con referencia a reserva y autor, sin duplicados ante reintentos.
+- [x] Aplicar las constantes compartidas: asistencia +1, encuesta +2, ausencia -3 y saldo mínimo 0.
+- [x] Exponer saldo, nivel e historial propios, y ajustes de administrador con motivo obligatorio.
+- [x] Incluir encuesta única de calificación 1–5 después de una asistencia finalizada.
+- [x] Verificar concurrencia, permisos, ajustes y consistencia del saldo con PostgreSQL real.
 
 Cierre: el personal completa el ciclo de una reserva y los puntos resultantes son trazables y se aplican una sola vez. El cliente puede consultar su saldo e historial.
 
-El primer avance registra estados y eventos manualmente, sin correcciones posteriores ni puntos. Antes de activar fidelización se debe definir el tratamiento de esos eventos ya registrados, sin duplicar recompensas. Ver [ASISTENCIA.md](ASISTENCIA.md).
+La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplican a nuevos registros; el historial anterior no se recalcula. Reconocimientos anteriores requieren ajustes administrativos explícitos. Ver [ASISTENCIA.md](ASISTENCIA.md) y [FIDELIZACION.md](FIDELIZACION.md). Antes de operar, definir el procedimiento para corregir errores de asistencia y revisar reservas que permanezcan CONFIRMED después del servicio.
 
 ## 2. Construir la interfaz — etapa 6, pendiente
 
 - [x] Web adaptable elegida: React/Vite, Tailwind y TanStack Router, adaptada del diseño de Lovable.
 - [x] Registro, login y sesión para integración local; quedan pendientes recuperación de cuenta y revisión de sesión entre pestañas/almacenamiento para producción.
 - [x] Sucursal, fecha de servicio, tamaño de grupo, turnos libres y confirmación conectados a la API.
-- [ ] Implementar reservas propias, cancelaciones, asistencia para el personal y fidelización.
-- [ ] Implementar administración de sucursales, asignaciones, mesas, horarios y bloqueos según rol.
+- [x] Reservas propias, cancelaciones y consulta de fidelización/encuestas para clientes.
+- [x] Asistencia para el personal y ajustes de puntos para administración desde la interfaz.
+- [x] Usuarios, cambios CUSTOMER/STAFF y asignaciones a sucursales existentes desde administración.
+- [ ] Formularios web de sucursales, mesas, horarios, excepciones y bloqueos según rol.
 - [ ] Resolver resultados inciertos al reservar: hoy no existe clave de idempotencia y repetir el POST puede crear otra reserva si queda otra mesa. Definir idempotencia en la API o un mecanismo de reconciliación antes de habilitar reintentos en la interfaz.
 - [x] Mostrar fechas en la zona del restaurante y explicar los servicios que cruzan medianoche.
 - [ ] Verificar navegación con teclado, pantallas pequeñas, carga, errores, sesión vencida y turnos agotados durante la confirmación.
@@ -37,7 +39,7 @@ El primer avance registra estados y eventos manualmente, sin correcciones poster
 
 Cierre: una persona puede completar los recorridos del producto sin depender de Swagger, incluidos errores y recuperación de sesión.
 
-El recorrido del cliente ya está conectado y verificado en escritorio y móvil. Ver [FRONTEND.md](FRONTEND.md). El almacenamiento actual usa sessionStorage, no cookies HttpOnly; requiere revisión de seguridad y coordinación entre pestañas antes del lanzamiento. Las pruebas del cliente son un avance de esta etapa, no cierran las pantallas pendientes de personal/administración.
+El recorrido del cliente y la gestión del restaurante se conectan a la API real. Ver [FRONTEND.md](FRONTEND.md) y [GESTION-WEB.md](GESTION-WEB.md). El almacenamiento actual usa sessionStorage, no cookies HttpOnly; requiere revisión de seguridad y coordinación entre pestañas antes del lanzamiento. Los formularios de configuración operativa siguen pendientes.
 
 ## 3. Preparar seguridad y operación — etapa 7, pendiente
 
@@ -98,6 +100,6 @@ pnpm.cmd --filter @repo/api test:integration
 git diff --check
 ```
 
-La integración crea y elimina únicamente sus usuarios, sucursales y recursos asociados. Nunca apuntarla a producción. Cubre las etapas 1–4 y asistencia/ausencia de la etapa 5; faltan los casos de puntos. El frontend tiene sus propias pruebas de cliente y navegador.
+La integración crea y elimina únicamente sus usuarios, sucursales y recursos asociados. Nunca apuntarla a producción. Cubre las etapas 1–5, incluidos puntos, encuestas y ajustes. El frontend tiene sus propias pruebas de cliente y navegador.
 
 Para un despliegue futuro, generar Prisma y compilar durante la construcción de la versión, aplicar las migraciones versionadas con `pnpm.cmd --filter @repo/api db:deploy` y arrancar con `pnpm.cmd --filter @repo/api start`, adaptando el ejecutable de pnpm al sistema operativo. La configuración de hosting, TLS, supervisión y respaldo sigue pendiente: estos comandos solos no completan un despliegue.

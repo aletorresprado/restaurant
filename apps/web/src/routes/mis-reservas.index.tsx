@@ -7,6 +7,7 @@ import { useStore } from '@/lib/store';
 import { reservationPage } from '@/lib/reservations';
 import { formatDateTime } from '@/lib/format';
 import { hero } from '@/lib/presentation';
+import { LoyaltyPanel } from '@/components/Loyalty';
 export const Route = createFileRoute('/mis-reservas/')({
   head: () => ({ meta: [{ title: 'Mis reservas — App Resto' }] }),
   component: Reservations,
@@ -53,6 +54,7 @@ function Reservations() {
       <p className="mt-2 text-sm text-muted-foreground">
         Tus reservas en orden de fecha, incluidas las anteriores y canceladas.
       </p>
+      <LoyaltyPanel />
       {query.isPending ? (
         <div className="mt-6 space-y-3">
           <Skeleton className="h-24" />

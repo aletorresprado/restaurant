@@ -65,6 +65,25 @@ test('customer reserves, reloads, cancels and logs in against PostgreSQL', async
     await page.getByRole('button', { name: 'Ingresar', exact: true }).last().click();
     await expect(page.getByRole('heading', { name: 'Mis reservas' })).toBeVisible();
     await expect(page.getByText('Cancelada por vos', { exact: true })).toBeVisible();
+    await expect(page.getByText('0 puntos · Nivel WHITE', { exact: true })).toBeVisible();
+    const owner = await db.user.findUniqueOrThrow({ where: { email } });
+    const table = await db.restaurantTable.findFirstOrThrow({ where: { branchId } });
+    const historical = await db.reservation.create({ data: {
+      userId: owner.id, branchId: branchId!, tableId: table.id, serviceDate: '2026-01-01', partySize: 2,
+      startAt: new Date(Date.now() - 4 * 3600000), endAt: new Date(Date.now() - 2 * 3600000), status: 'ATTENDED',
+    } });
+    await page.goto(`/mis-reservas/${historical.id}`);
+    await expect(page.getByRole('heading', { name: '¿Cómo fue tu visita?' })).toBeVisible();
+    await page.getByLabel('Calificación (1: mala, 5: excelente)').selectOption('4');
+    await page.getByRole('button', { name: 'Enviar encuesta' }).click();
+    await expect(page.getByText('Gracias por responder', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Gracias por responder', { exact: true })).toBeVisible();
+    expect(await db.loyaltyMovement.count({ where: { userId: owner.id, kind: 'SURVEY' } })).toBe(1);
+    await page.goto('/mis-reservas');
+    await expect(page.getByText('2 puntos · Nivel WHITE', { exact: true })).toBeVisible();
+    await expect(page.getByText('Encuesta: +2 · Saldo 2', { exact: true })).toBeVisible();
+    await page.screenshot({ path: info.outputPath('fidelizacion.png'), fullPage: true });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);

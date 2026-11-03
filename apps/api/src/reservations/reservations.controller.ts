@@ -61,7 +61,7 @@ export class StaffReservationsController {
   @Get(':id')
   find(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('id', ParseUUIDPipe) id: string) { return this.reservations.find(id, undefined, branchId); }
   @Post(':id/attendance') @HttpCode(200)
-  @ApiOperation({ summary: 'Registrar asistencia desde el inicio o ausencia después de la tolerancia; sin puntos en esta etapa' })
+  @ApiOperation({ summary: 'Registrar asistencia o ausencia y su movimiento de puntos en una sola transacción' })
   @ApiBody({ schema: { type: 'object', required: ['outcome'], additionalProperties: false, properties: { outcome: { type: 'string', enum: ['ATTENDED', 'NO_SHOW'] }, reason: { type: 'string', minLength: 3, maxLength: 500 } } } })
   attendance(@Req() request: UserRequest, @Param('branchId', ParseUUIDPipe) branchId: string, @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodPipe(RecordAttendanceSchema)) body: RecordAttendanceDto) { return this.reservations.recordAttendance(branchId, id, request.userId, body); }
