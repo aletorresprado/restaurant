@@ -7,6 +7,8 @@ import { BranchQuery } from './branches.schemas';
 import { occupyingStatuses } from '../reservations/rules';
 
 const staffFields = { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true } as const;
+// Never serialize image bytes in catalog, operational or administrative lists.
+const branchFields = { id: true, name: true, address: true, phone: true, latitude: true, longitude: true, isActive: true, createdAt: true, updatedAt: true, imageVersion: true } as const;
 
 @Injectable()
 export class BranchesService {
@@ -18,14 +20,14 @@ export class BranchesService {
       ...(scope === 'staff' && role !== Role.ADMIN ? { staff: { some: { userId } } } : {}),
     };
     const [data, total] = await this.db.$transaction([
-      this.db.branch.findMany({ where, skip: (query.page - 1) * query.limit, take: query.limit, orderBy: [{ name: 'asc' }, { id: 'asc' }] }),
+      this.db.branch.findMany({ where, select: branchFields, skip: (query.page - 1) * query.limit, take: query.limit, orderBy: [{ name: 'asc' }, { id: 'asc' }] }),
       this.db.branch.count({ where }),
     ]);
     return { data, meta: { total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) } };
   }
 
   async find(id: string, activeOnly = false) {
-    const branch = await this.db.branch.findFirst({ where: { id, ...(activeOnly ? { isActive: true } : {}) } });
+    const branch = await this.db.branch.findFirst({ where: { id, ...(activeOnly ? { isActive: true } : {}) }, select: branchFields });
     if (!branch) throw new NotFoundException('Sucursal no encontrada');
     return branch;
   }
@@ -38,7 +40,7 @@ export class BranchesService {
     return branch;
   }
 
-  create(data: CreateBranchDto) { return this.db.branch.create({ data }); }
+  create(data: CreateBranchDto) { return this.db.branch.create({ data, select: branchFields }); }
 
   async update(id: string, data: UpdateBranchDto) {
     const existing = await this.find(id);
@@ -48,7 +50,7 @@ export class BranchesService {
     try { return await this.db.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${id}::uuid FOR UPDATE`;
       if (data.isActive === false && await tx.reservation.findFirst({ where: { branchId: id, status: { in: [...occupyingStatuses] }, endAt: { gt: new Date() } } })) throw new ConflictException('La sucursal tiene reservas vigentes');
-      return tx.branch.update({ where: { id }, data });
+      return tx.branch.update({ where: { id }, data, select: branchFields });
     }); }
     catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') throw new NotFoundException('Sucursal no encontrada');

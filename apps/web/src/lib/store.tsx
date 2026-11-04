@@ -69,13 +69,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setReady(true);
       return unsubscribe;
     }
+    const restoringUserId = getSession()?.user.id;
     api<User>('/auth/me', {}, true)
       .then((value) => {
         const session = getSession();
-        if (session) setSession({ ...session, user: value });
+        if (session && session.user.id === restoringUserId && value.id === restoringUserId)
+          setSession({ ...session, user: value });
       })
       .catch((error) => {
-        if (getSession())
+        if (getSession()?.user.id === restoringUserId)
           setAuthError(error instanceof Error ? error.message : 'No se pudo verificar tu sesión.');
       })
       .finally(() => setReady(true));

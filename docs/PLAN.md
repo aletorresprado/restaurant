@@ -1,6 +1,6 @@
 # Plan de desarrollo de App Resto
 
-Actualizado: 3 de noviembre de 2026.
+Actualizado: 4 de noviembre de 2026.
 
 ## Objetivo
 
@@ -109,7 +109,9 @@ Criterio de cierre: los eventos generan los puntos esperados una sola vez, inclu
 - [x] Consulta de asistencia en detalle, saldo/nivel/historial en Mis reservas y encuesta tras una visita finalizada.
 - [x] Agenda de sucursales autorizadas, asistencia, ausencia, cancelación e historial desde la web.
 - [x] Administración de usuarios CUSTOMER/STAFF, asignaciones y fidelización con ajustes auditados y reintentos seguros en la misma pestaña.
-- [ ] Formularios de altas/edición/desactivación de sucursales, mesas, horarios, excepciones y bloqueos.
+- [x] Formularios de alta/edición/activación/desactivación de sucursales, con validaciones compartidas, conflictos por reservas vigentes y tratamiento de altas con respuesta incierta.
+- [x] Imagen propia por sucursal: selección, vista previa, carga/reemplazo/borrado ADMIN, persistencia PostgreSQL y tarjetas del inicio con respaldo general.
+- [ ] Formularios de mesas, horarios, excepciones y bloqueos.
 
 Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual, pero se eliminan datos ficticios y funciones que nuestra API no ofrece. Ver [FRONTEND.md](FRONTEND.md) para procedencia y [GESTION-WEB.md](GESTION-WEB.md) para agenda, administración y verificación. La etapa 6 sigue abierta por configuración operativa y revisión de sesiones.
 
@@ -128,19 +130,23 @@ Criterio de cierre: despliegue reproducible con configuración separada, respald
 
 Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye seguridad de autenticación, reconciliación de reintentos de reserva, CI, entorno de prueba, migraciones, restauración y validación del primer lanzamiento. Todos esos controles de publicación siguen pendientes.
 
-## Punto de reanudación — cierre del 3 de noviembre de 2026
+## Punto de reanudación — actualizado el 4 de noviembre de 2026
 
-Entrega actual: fidelización persistente y agenda/administración web. Documentación de uso y decisiones en [FIDELIZACION.md](FIDELIZACION.md) y [GESTION-WEB.md](GESTION-WEB.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
+Entrega actual: fidelización persistente, agenda/administración web, formularios de sucursales e imágenes propias para el inicio. El propietario confirmó el acceso ADMIN y probó los formularios; su aporte originó la selección de imágenes. Documentación de uso y decisiones en [FIDELIZACION.md](FIDELIZACION.md), [GESTION-WEB.md](GESTION-WEB.md) e [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
 
 Para retomar, seguir este orden:
 
+La próxima entrega comienza con **gestión de mesas desde la web**: elegir una sucursal autorizada, listar/crear mesas y editar capacidad o estado, mostrando los conflictos de la API con reservas vigentes. Después seguir con horarios, excepciones y bloqueos. La etapa 6 permanece abierta.
+
 1. Iniciar `pnpm.cmd dev` y comprobar el acceso con una cuenta ADMIN. Si no existe, ejecutar el comando interactivo de `GESTION-WEB.md`; no promover cuentas directamente en la base ni guardar credenciales en Git.
-2. Completar en Administración las altas, edición y desactivación de sucursales, usando los endpoints existentes y mostrando conflictos por reservas vigentes.
+2. Probar **Administración → Sucursales**: altas, edición y activación/desactivación ya implementadas. Una sucursal nueva no ofrece turnos hasta configurar mesas y horarios.
 3. Agregar gestión de mesas y estados, horarios semanales, excepciones por fecha y bloqueos desde sucursales autorizadas. Mantener zona del restaurante, cruce de medianoche y validaciones de la API.
 4. Ampliar los recorridos de navegador para esa configuración, incluyendo permisos, conflictos y pantallas pequeñas. Actualizar README y este plan con cada entrega.
 5. Resolver sesiones/operaciones entre pestañas y continuar con los controles de producción de la etapa 7. No marcar la etapa 6 completa antes de cubrir los formularios pendientes y su verificación.
 
-Verificado en esta entrega: compilación, chequeo de tipos, 17 pruebas de API y 6 de web, integración PostgreSQL de puntos/asistencia y cuatro recorridos Playwright (cliente y gestión, escritorio y móvil). Incluyen respuesta perdida de un ajuste y reintento tras recargar sin duplicar movimientos. El script de creación de administrador se validó sintácticamente; la creación de cuentas permanentes queda como acción explícita del propietario.
+Verificado al 4 de noviembre: compilación del monorepo, tipos, 17 pruebas de API y 8 de web, integración PostgreSQL ampliada con imágenes y seis recorridos Playwright (cliente, gestión y sucursales, escritorio y móvil). Incluyen fotos propias del inicio, recarga, reemplazo/borrado, conflictos de desactivación, alta incierta y ajuste con respuesta perdida sin duplicar movimientos. La sexta migración `20261104000100_branch_images` se aplicó localmente. Sin dependencias ni servicios externos adicionales. Las fotos se incluyen en los respaldos de la base; revisar volumen/optimización al preparar producción.
+
+También se corrigió la restauración demorada de perfil al cambiar de cuenta: una respuesta de la cuenta anterior no sobrescribe la nueva. El recorrido de gestión reproduce ese caso con una respuesta retenida; esto no resuelve todavía la coordinación de sesiones entre pestañas.
 
 Límites que deben conservarse visibles: resultados de asistencia definitivos, ausencia manual, historial anterior sin recalcular automáticamente, sin canjes ni vencimiento de puntos, sin coordinación de ajustes entre pestañas y sin recuperación/verificación de correo. Ver la hoja de ruta antes de publicar.
 

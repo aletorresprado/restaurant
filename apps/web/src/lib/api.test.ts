@@ -59,4 +59,30 @@ describe('authenticated API client', () => {
     await expect(logoutSession()).rejects.toMatchObject({ status: 0 });
     expect(getSession()?.user.id).toBe(user.id);
   });
+  it('lets the browser provide the multipart boundary for authenticated uploads', async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(200, { imageVersion: 'version' }));
+    vi.stubGlobal('fetch', fetcher);
+    const body = new FormData();
+    body.append('file', new Blob(['bytes'], { type: 'image/jpeg' }), 'photo.jpg');
+    await api('/admin/branches/id/image', { method: 'POST', body }, true);
+    const options = fetcher.mock.calls[0][1] as RequestInit;
+    expect(options.body).toBe(body);
+    expect(options.headers).toMatchObject({ Authorization: 'Bearer old' });
+    expect(new Headers(options.headers).has('Content-Type')).toBe(false);
+  });
+  it('preserves binary response decoding after refreshing an expired image request', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        if (url.endsWith('/auth/refresh'))
+          return response(200, { user, accessToken: 'new', refreshToken: 'next' });
+        return (init.headers as Record<string, string>).Authorization === 'Bearer old'
+          ? response(401, {})
+          : new Response(new Blob(['photo'], { type: 'image/png' }));
+      }),
+    );
+    const blob = await api<Blob>('/admin/branches/id/image', {}, true, 'blob');
+    expect(blob.type).toBe('image/png');
+    expect(await blob.text()).toBe('photo');
+  });
 });

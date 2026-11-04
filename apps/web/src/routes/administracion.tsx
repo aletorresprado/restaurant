@@ -5,6 +5,7 @@ import { api, post, ApiError, errorMessage, type Page } from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { formatDateTime } from '@/lib/format';
 import { Button, Container, Field, Notice, inputClass } from '@/components/kit';
+import { BranchManagement } from '@/components/management/BranchManagement';
 import {
   ManagementAccess,
   Pager,
@@ -51,6 +52,7 @@ const kinds: Record<string, string> = {
 };
 function Administration() {
   const { user } = useStore();
+  const [section, setSection] = useState<'users' | 'branches'>('users');
   const [page, setPage] = useState(1),
     [selected, setSelected] = useState<ManagedUser | null>(null);
   const users = useQuery({
@@ -62,57 +64,81 @@ function Administration() {
     <Container className="py-10">
       <h1 className="text-3xl font-semibold">Administración</h1>
       <p className="mt-2 text-muted-foreground">
-        Gestioná el acceso del personal y auditá la fidelización de cada cuenta.
+        Gestioná sucursales, acceso del personal y fidelización.
       </p>
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <section className="min-w-0 rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-xl font-semibold">Usuarios</h2>
-          {users.isPending ? (
-            <p className="mt-4">Cargando usuarios…</p>
-          ) : users.error ? (
-            <QueryError error={users.error} retry={users.refetch} />
-          ) : (
-            <>
-              <ul className="mt-4 space-y-2">
-                {users.data?.data.map((person) => (
-                  <li key={person.id}>
-                    <button
-                      className={`w-full rounded-xl border p-3 text-left transition hover:bg-secondary ${selected?.id === person.id ? 'border-primary bg-secondary' : 'border-border'}`}
-                      onClick={() => setSelected(person)}
-                    >
-                      <span className="block font-medium">
-                        {person.firstName} {person.lastName}
-                      </span>
-                      <span className="block break-all text-sm text-muted-foreground">
-                        {person.email}
-                      </span>
-                      <span className="mt-1 block text-xs">
-                        {roles[person.role]} · {person.isActive ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {!users.data?.data.length && <p>No hay usuarios.</p>}
-              <Pager page={page} totalPages={users.data?.meta.totalPages ?? 0} onChange={setPage} />
-            </>
-          )}
-        </section>
-        <div className="min-w-0">
-          {selected ? (
-            <UserManagement
-              key={`${user?.id}:${selected.id}`}
-              person={selected}
-              onUpdate={setSelected}
-            />
-          ) : (
-            <Notice title="Seleccioná una cuenta">
-              Podés consultar sus puntos, realizar un ajuste con motivo y gestionar su acceso como
-              personal.
-            </Notice>
-          )}
+      <nav aria-label="Secciones de administración" className="mt-6 flex flex-wrap gap-2">
+        <Button
+          variant={section === 'users' ? 'primary' : 'secondary'}
+          aria-pressed={section === 'users'}
+          onClick={() => setSection('users')}
+        >
+          Usuarios y puntos
+        </Button>
+        <Button
+          variant={section === 'branches' ? 'primary' : 'secondary'}
+          aria-pressed={section === 'branches'}
+          onClick={() => setSection('branches')}
+        >
+          Sucursales
+        </Button>
+      </nav>
+      {section === 'branches' ? (
+        <BranchManagement />
+      ) : (
+        <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <section className="min-w-0 rounded-2xl border border-border bg-card p-5">
+            <h2 className="text-xl font-semibold">Usuarios</h2>
+            {users.isPending ? (
+              <p className="mt-4">Cargando usuarios…</p>
+            ) : users.error ? (
+              <QueryError error={users.error} retry={users.refetch} />
+            ) : (
+              <>
+                <ul className="mt-4 space-y-2">
+                  {users.data?.data.map((person) => (
+                    <li key={person.id}>
+                      <button
+                        className={`w-full rounded-xl border p-3 text-left transition hover:bg-secondary ${selected?.id === person.id ? 'border-primary bg-secondary' : 'border-border'}`}
+                        onClick={() => setSelected(person)}
+                      >
+                        <span className="block font-medium">
+                          {person.firstName} {person.lastName}
+                        </span>
+                        <span className="block break-all text-sm text-muted-foreground">
+                          {person.email}
+                        </span>
+                        <span className="mt-1 block text-xs">
+                          {roles[person.role]} · {person.isActive ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {!users.data?.data.length && <p>No hay usuarios.</p>}
+                <Pager
+                  page={page}
+                  totalPages={users.data?.meta.totalPages ?? 0}
+                  onChange={setPage}
+                />
+              </>
+            )}
+          </section>
+          <div className="min-w-0">
+            {selected ? (
+              <UserManagement
+                key={`${user?.id}:${selected.id}`}
+                person={selected}
+                onUpdate={setSelected}
+              />
+            ) : (
+              <Notice title="Seleccioná una cuenta">
+                Podés consultar sus puntos, realizar un ajuste con motivo y gestionar su acceso como
+                personal.
+              </Notice>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </Container>
   );
 }

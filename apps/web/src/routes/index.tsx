@@ -3,6 +3,7 @@ import { MapPin, Phone } from 'lucide-react';
 import { Button, Container, Notice, Skeleton, buttonVariants } from '@/components/kit';
 import { useStore } from '@/lib/store';
 import { hero } from '@/lib/presentation';
+import { BranchImage } from '@/components/BranchImage';
 export const Route = createFileRoute('/')({
   head: () => ({ meta: [{ title: 'App Resto — Tu mesa, sin vueltas' }] }),
   component: Home,
@@ -86,11 +87,9 @@ function Home() {
                 className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card"
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
-                  <img
-                    src={hero}
-                    alt=""
+                  <BranchImage
+                    branch={branch}
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    loading="lazy"
                   />
                   <div className="absolute inset-0 photo-scrim" />
                   <h3 className="absolute bottom-3 left-4 right-4 text-2xl font-semibold leading-tight text-on-photo">

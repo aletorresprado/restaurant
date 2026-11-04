@@ -122,8 +122,34 @@ test('staff operates assigned agenda and admin audits points with safe retry', a
     await expect(
       page.getByText('Tu cuenta no tiene acceso a esta sección', { exact: true }),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Salir (STAFF)' }).click();
-    await login(page, admin.email);
+    // Restore STAFF slowly, then log in as ADMIN without replacing the root
+    // provider: the old profile response must not overwrite the new account.
+    let releaseProfile!: () => void;
+    let capturedProfile!: () => void;
+    const profileReady = new Promise<void>((resolve) => {
+      capturedProfile = resolve;
+    });
+    const profileGate = new Promise<void>((resolve) => {
+      releaseProfile = resolve;
+    });
+    await page.route('**/api/v1/auth/me', async (route) => {
+      const response = await route.fetch();
+      capturedProfile();
+      await profileGate;
+      await route.fulfill({ response });
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await profileReady;
+    await page.getByRole('link', { name: 'Ingresar', exact: true }).first().click();
+    await page.getByLabel('Email', { exact: true }).fill(admin.email);
+    await page.getByLabel('Contraseña', { exact: true }).fill('Password123');
+    const newLogin = page.waitForResponse((response) => response.url().endsWith('/auth/login'));
+    await page.getByRole('button', { name: 'Ingresar', exact: true }).last().click();
+    await newLogin;
+    const oldProfile = page.waitForResponse((response) => response.url().endsWith('/auth/me'));
+    releaseProfile();
+    await oldProfile;
+    await page.unroute('**/api/v1/auth/me');
     await expect(page.getByRole('heading', { name: 'Administración', exact: true })).toBeVisible();
     await selectUser(page, customer.email);
     await expect(page.getByText('0 puntos · Nivel WHITE', { exact: true })).toBeVisible();
@@ -174,6 +200,7 @@ test('staff operates assigned agenda and admin audits points with safe retry', a
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: info.outputPath('administracion.png'), fullPage: true });
     await page.getByRole('button', { name: 'Salir (ADMIN)' }).click();
+    await expect(page.getByRole('link', { name: 'Ingresar', exact: true }).first()).toBeVisible();
     await login(page, customer.email);
     await expect(page.getByRole('heading', { name: 'Mis reservas', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Agenda', exact: true })).toHaveCount(0);

@@ -39,6 +39,8 @@ Los identificadores deben ser UUID. Los campos desconocidos o cuerpos vacíos en
 
 ## Recorrido desde Swagger
 
+Desde el 4 de noviembre de 2026 también se pueden crear, editar, activar y desactivar sucursales desde **Administración → Sucursales**, con una cuenta ADMIN. Ver [GESTION-WEB.md](GESTION-WEB.md) para el recorrido web. Los formularios usan los endpoints existentes. La selección de fotos propias agrega endpoints y la sexta migración; ver [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md).
+
 1. Aplicar las migraciones, generar Prisma y compilar según el README. Si no hay un administrador, configurar sus datos y ejecutar `db:seed`.
 2. Abrir `http://localhost:3000/api/docs` y ejecutar `POST /auth/login` con el administrador.
 3. Copiar `accessToken` en el botón **Authorize**. Swagger agrega el prefijo Bearer automáticamente.

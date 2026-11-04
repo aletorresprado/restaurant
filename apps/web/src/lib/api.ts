@@ -13,6 +13,9 @@ export type Branch = {
   address: string;
   phone: string | null;
   isActive: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  imageVersion?: string | null;
 };
 export type Page<T> = {
   data: T[];
@@ -79,13 +82,21 @@ export function restoreSession() {
   }
 }
 const base = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
-async function raw<T>(path: string, options: RequestInit, token?: string): Promise<T> {
+export const apiUrl = (path: string) => `${base}${path}`;
+async function raw<T>(
+  path: string,
+  options: RequestInit,
+  token?: string,
+  responseType: 'json' | 'blob' = 'json',
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${base}${path}`, {
       ...options,
       headers: {
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.body && !(options.body instanceof FormData)
+          ? { 'Content-Type': 'application/json' }
+          : {}),
         ...options.headers,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
@@ -95,6 +106,7 @@ async function raw<T>(path: string, options: RequestInit, token?: string): Promi
   } catch {
     throw new ApiError(0, 'No pudimos conectar con el servidor. Revisá tu conexión.');
   }
+  if (response.ok && responseType === 'blob') return (await response.blob()) as T;
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const message =
@@ -111,13 +123,14 @@ export async function api<T>(
   path: string,
   options: RequestInit = {},
   authenticated = false,
+  responseType: 'json' | 'blob' = 'json',
 ): Promise<T> {
   const oldToken = session?.accessToken;
   const userId = session?.user.id;
   const version = generation;
   if (authenticated && (!session || loggingOut)) throw new ApiError(401, 'Ingresá para continuar.');
   try {
-    return await raw<T>(path, options, authenticated ? oldToken : undefined);
+    return await raw<T>(path, options, authenticated ? oldToken : undefined, responseType);
   } catch (error) {
     if (
       !authenticated ||
@@ -151,7 +164,7 @@ export async function api<T>(
     }
     if (!session || session.user.id !== userId)
       throw new ApiError(401, 'La sesión cambió. Ingresá nuevamente.');
-    return raw<T>(path, options, session.accessToken);
+    return raw<T>(path, options, session.accessToken, responseType);
   }
 }
 export const post = <T>(path: string, body: unknown, authenticated = false) =>

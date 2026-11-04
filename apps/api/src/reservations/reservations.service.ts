@@ -16,7 +16,7 @@ export class ReservationsService {
   constructor(private readonly db: PrismaService, private readonly operations: OperationsService, private readonly loyalty: LoyaltyService) {}
 
   private async context(tx: Tx, branchId: string, date: string, partySize: number) {
-    const branch = await tx.branch.findFirst({ where: { id: branchId, isActive: true } });
+    const branch = await tx.branch.findFirst({ where: { id: branchId, isActive: true }, select: { id: true } });
     if (!branch) throw new NotFoundException('Sucursal activa no encontrada');
     const hours = await this.operations.resolved(tx, branchId, date);
     if (!hours.window) return { hours, tables: [], reservations: [], blocks: [] };

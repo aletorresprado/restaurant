@@ -41,6 +41,9 @@ model Branch {
   latitude  Float?
   longitude Float?
   isActive  Boolean  @default(true)
+  imageData Bytes?
+  imageMime String? @db.VarChar(20)
+  imageVersion String? @db.Uuid
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   staff     BranchStaff[]

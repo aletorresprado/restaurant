@@ -1,10 +1,10 @@
 # Hoja de ruta a producción
 
-Actualizado: 3 de noviembre de 2026.
+Actualizado: 4 de noviembre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay cinco migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas y ajustes. El frontend agrega 6 pruebas de cliente y cuatro recorridos de navegador aprobados contra la base real: cliente y gestión en escritorio y móvil, incluidos fidelización, roles y reintentos de ajustes.
+Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay seis migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes e imágenes de sucursales. El frontend agrega 8 pruebas de cliente y seis recorridos de navegador contra la base real: cliente, gestión y sucursales en escritorio y móvil, incluidos fidelización, roles, conflictos de desactivación, fotos y respuestas de red perdidas.
 
 La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones y puntos; siguen pendientes los formularios de configuración operativa, infraestructura e integración continua.
 
@@ -31,7 +31,8 @@ La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplic
 - [x] Reservas propias, cancelaciones y consulta de fidelización/encuestas para clientes.
 - [x] Asistencia para el personal y ajustes de puntos para administración desde la interfaz.
 - [x] Usuarios, cambios CUSTOMER/STAFF y asignaciones a sucursales existentes desde administración.
-- [ ] Formularios web de sucursales, mesas, horarios, excepciones y bloqueos según rol.
+- [x] Formularios web de sucursales para ADMIN, con validación, confirmación de desactivación y conflictos por reservas vigentes.
+- [ ] Formularios web de mesas, horarios, excepciones y bloqueos según rol.
 - [ ] Resolver resultados inciertos al reservar: hoy no existe clave de idempotencia y repetir el POST puede crear otra reserva si queda otra mesa. Definir idempotencia en la API o un mecanismo de reconciliación antes de habilitar reintentos en la interfaz.
 - [x] Mostrar fechas en la zona del restaurante y explicar los servicios que cruzan medianoche.
 - [ ] Verificar navegación con teclado, pantallas pequeñas, carga, errores, sesión vencida y turnos agotados durante la confirmación.
@@ -67,6 +68,7 @@ Cierre: configuración de producción explícita, políticas implementadas y pru
 - [ ] Definir ejecución de migraciones una sola vez por despliegue y permisos necesarios; no correr `prisma migrate dev` en producción.
 - [ ] Crear un administrador inicial por el procedimiento de seed, sin credenciales predeterminadas y sin repetirlo automáticamente en cada arranque.
 - [ ] Configurar copias de seguridad y retención; acordar cuánta pérdida de datos y tiempo de recuperación son aceptables.
+- [ ] Verificar que respaldo y restauración incluyan las imágenes BYTEA de sucursales; dimensionar su almacenamiento y transferencia y revisar optimización/CDN si el catálogo crece. Ver [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md).
 - [ ] Probar restauración en una base aislada y documentar comandos específicos del proveedor elegido.
 - [ ] Configurar monitoreo y alertas de errores, disponibilidad y capacidad de base, y asignar responsable de atenderlas.
 

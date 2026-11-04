@@ -4,7 +4,7 @@ Monorepo pnpm con API NestJS, validación Zod y tipos compartidos.
 
 ## Estado
 
-Estado al 3 de noviembre de 2026: API funcional en desarrollo local, con las etapas 1 a 5 completadas, y primera interfaz web de clientes conectada a la API, incluidos puntos y encuestas. El proyecto aún no está preparado para operar en producción.
+Estado al 4 de noviembre de 2026: API funcional en desarrollo local, con las etapas 1 a 5 completadas, e interfaz web de clientes, agenda y administración, incluida gestión de sucursales. El proyecto aún no está preparado para operar en producción.
 
 - Identidad: registro, login, perfil, renovación y cierre de sesión con persistencia PostgreSQL/Prisma.
 - Organización: permisos por rol, sucursales y asignaciones de personal, con permisos consultados en cada petición.
@@ -160,11 +160,15 @@ La fidelización agrega la quinta migración, `20261103000100_loyalty`. Para act
 
 ### Agenda y administración web
 
-Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 3 de noviembre** en [docs/PLAN.md](docs/PLAN.md): primero formularios de sucursales y luego mesas, horarios, excepciones y bloqueos; después revisión de sesiones y preparación productiva.
+Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 4 de noviembre** en [docs/PLAN.md](docs/PLAN.md). La próxima entrega comienza con gestión web de mesas (alta, capacidad y estado por sucursal autorizada); luego horarios, excepciones y bloqueos, revisión de sesiones y preparación productiva.
 
-Las cuentas STAFF ingresan a **Agenda** (`/personal`): sucursal asignada, fecha de servicio, reservas, asistencia, ausencia, cancelación e historial. Las cuentas ADMIN también acceden a **Administración** (`/administracion`): usuarios, cambios CUSTOMER/STAFF, asignaciones de personal, saldo y ajustes de puntos auditados. El login dirige al área del rol; la API conserva todas las validaciones y permisos.
+Las cuentas STAFF ingresan a **Agenda** (`/personal`): sucursal asignada, fecha de servicio, reservas, asistencia, ausencia, cancelación e historial. Las cuentas ADMIN también acceden a **Administración** (`/administracion`): **Usuarios y puntos** para roles, asignaciones y ajustes auditados; **Sucursales** para crear, editar, activar y desactivar, con validación de datos y confirmación de desactivación. Los cambios actualizan el catálogo y las sucursales disponibles para agenda/asignaciones. La API rechaza desactivar sucursales con reservas vigentes. Una sucursal nueva necesita mesas y horarios para ofrecer turnos; esa configuración sigue disponible desde Swagger.
 
-Si solo hay cuentas de cliente, crear un administrador separado con `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-admin.ps1` desde la raíz. Pide un correo nuevo y una contraseña oculta; no cambia cuentas existentes ni guarda credenciales en archivos. Luego salir de la app e ingresar con esa cuenta. Ver [GESTION-WEB.md](docs/GESTION-WEB.md) para uso, pruebas y límites. Los formularios web de sucursales, mesas, horarios y bloqueos siguen pendientes.
+Si solo hay cuentas de cliente, crear un administrador separado con `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-admin.ps1` desde la raíz. Pide un correo nuevo y una contraseña oculta; no cambia cuentas existentes ni guarda credenciales en archivos. Luego salir de la app e ingresar con esa cuenta. Ver [GESTION-WEB.md](docs/GESTION-WEB.md) para uso, pruebas y límites. Los formularios web de mesas, horarios, excepciones y bloqueos siguen pendientes.
+
+Cada sucursal puede tener una **imagen propia para el inicio**. En Administración → Sucursales, elegir un archivo JPG, PNG o WebP de hasta 2 MB en su tarjeta y pulsar **Guardar imagen**. Hay vista previa, reemplazo y borrado con confirmación; sin foto se usa la imagen general. Las imágenes se guardan en PostgreSQL, no en Git ni en el navegador, y no requieren otra cuenta o servicio. La visualización usa formato 4:3 con recorte centrado; no se modifica ni comprime el archivo original.
+
+Esta función agrega la sexta migración, `20261104000100_branch_images`, ya aplicada en el equipo de desarrollo. En otras instalaciones, detener la API si bloquea Prisma en Windows y ejecutar `pnpm.cmd --filter @repo/api db:generate`, `pnpm.cmd --filter @repo/api db:deploy` y `pnpm.cmd build` antes de reiniciar `pnpm.cmd dev`. Las copias de seguridad de PostgreSQL deben incluir las imágenes. Ver [IMAGENES-SUCURSALES.md](docs/IMAGENES-SUCURSALES.md).
 
 ## Validación
 

@@ -8,6 +8,8 @@ El repositorio de Lovable permanece separado y sin modificaciones. Esta integrac
 
 Actualización del 3 de noviembre de 2026: agenda y administración verificadas con compilación, tipos, 23 pruebas de API/web y cuatro recorridos de navegador aprobados, incluidos roles, puntos y reintentos después de una respuesta de red perdida. Detalles en [GESTION-WEB.md](GESTION-WEB.md).
 
+Actualización del 4 de noviembre de 2026: formularios de sucursales y elección de imágenes propias para las tarjetas del inicio. Se cubren altas, edición, estados, conflictos de reservas, catálogo público y respuesta incierta de creación; también subida, reemplazo y borrado de fotos con persistencia PostgreSQL. Esta última función agrega una migración y endpoints de imágenes, sin modificar reglas de reservas. Ver [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md). Validación: compilación, tipos, 25 pruebas de API/web, integración PostgreSQL ampliada y recorridos de escritorio/móvil.
+
 - Inicio con sucursales activas reales; carga, error, reintento y estado vacío.
 - Consulta pública de disponibilidad por sucursal, fecha de servicio y grupo.
 - Registro y login reales usando los esquemas de validación compartidos.
@@ -18,7 +20,7 @@ Actualización del 3 de noviembre de 2026: agenda y administración verificadas 
 - Cancelación con confirmación y motivo opcional, según la regla vigente del backend.
 - Restauración de sesión, renovación coordinada por pestaña y logout con revocación del refresh token.
 
-Desde el 3 de noviembre hay agenda para STAFF/ADMIN y administración de usuarios, asignaciones y puntos para ADMIN. El login dirige al área del rol; la confirmación de nuevas reservas sigue reservada a CUSTOMER. Ver [GESTION-WEB.md](GESTION-WEB.md). La configuración web de sucursales, mesas, horarios y bloqueos sigue pendiente.
+Desde el 3 de noviembre hay agenda para STAFF/ADMIN y administración de usuarios, asignaciones y puntos para ADMIN. Desde el 4 de noviembre, ADMIN también dispone de formularios para crear, editar y activar/desactivar sucursales. El login dirige al área del rol; la confirmación de nuevas reservas sigue reservada a CUSTOMER. Ver [GESTION-WEB.md](GESTION-WEB.md). La configuración web de mesas, horarios, excepciones y bloqueos sigue pendiente.
 
 ## Inicio local
 
