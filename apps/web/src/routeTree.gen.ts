@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdministracionRouteImport } from './routes/administracion'
 import { Route as ConfirmarRouteImport } from './routes/confirmar'
+import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as IngresarRouteImport } from './routes/ingresar'
+import { Route as MesasRouteImport } from './routes/mesas'
 import { Route as PersonalRouteImport } from './routes/personal'
 import { Route as ReservarRouteImport } from './routes/reservar'
 import { Route as ConfirmadaIdRouteImport } from './routes/confirmada.$id'
@@ -34,9 +36,19 @@ const ConfirmarRoute = ConfirmarRouteImport.update({
   path: '/confirmar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HorariosRoute = HorariosRouteImport.update({
+  id: '/horarios',
+  path: '/horarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IngresarRoute = IngresarRouteImport.update({
   id: '/ingresar',
   path: '/ingresar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MesasRoute = MesasRouteImport.update({
+  id: '/mesas',
+  path: '/mesas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PersonalRoute = PersonalRouteImport.update({
@@ -69,7 +81,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/administracion': typeof AdministracionRoute
   '/confirmar': typeof ConfirmarRoute
+  '/horarios': typeof HorariosRoute
   '/ingresar': typeof IngresarRoute
+  '/mesas': typeof MesasRoute
   '/personal': typeof PersonalRoute
   '/reservar': typeof ReservarRoute
   '/confirmada/$id': typeof ConfirmadaIdRoute
@@ -80,7 +94,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/administracion': typeof AdministracionRoute
   '/confirmar': typeof ConfirmarRoute
+  '/horarios': typeof HorariosRoute
   '/ingresar': typeof IngresarRoute
+  '/mesas': typeof MesasRoute
   '/personal': typeof PersonalRoute
   '/reservar': typeof ReservarRoute
   '/confirmada/$id': typeof ConfirmadaIdRoute
@@ -92,7 +108,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/administracion': typeof AdministracionRoute
   '/confirmar': typeof ConfirmarRoute
+  '/horarios': typeof HorariosRoute
   '/ingresar': typeof IngresarRoute
+  '/mesas': typeof MesasRoute
   '/personal': typeof PersonalRoute
   '/reservar': typeof ReservarRoute
   '/confirmada/$id': typeof ConfirmadaIdRoute
@@ -105,7 +123,9 @@ export interface FileRouteTypes {
     | '/'
     | '/administracion'
     | '/confirmar'
+    | '/horarios'
     | '/ingresar'
+    | '/mesas'
     | '/personal'
     | '/reservar'
     | '/confirmada/$id'
@@ -116,7 +136,9 @@ export interface FileRouteTypes {
     | '/'
     | '/administracion'
     | '/confirmar'
+    | '/horarios'
     | '/ingresar'
+    | '/mesas'
     | '/personal'
     | '/reservar'
     | '/confirmada/$id'
@@ -127,7 +149,9 @@ export interface FileRouteTypes {
     | '/'
     | '/administracion'
     | '/confirmar'
+    | '/horarios'
     | '/ingresar'
+    | '/mesas'
     | '/personal'
     | '/reservar'
     | '/confirmada/$id'
@@ -139,7 +163,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdministracionRoute: typeof AdministracionRoute
   ConfirmarRoute: typeof ConfirmarRoute
+  HorariosRoute: typeof HorariosRoute
   IngresarRoute: typeof IngresarRoute
+  MesasRoute: typeof MesasRoute
   PersonalRoute: typeof PersonalRoute
   ReservarRoute: typeof ReservarRoute
   ConfirmadaIdRoute: typeof ConfirmadaIdRoute
@@ -170,11 +196,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfirmarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/horarios': {
+      id: '/horarios'
+      path: '/horarios'
+      fullPath: '/horarios'
+      preLoaderRoute: typeof HorariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ingresar': {
       id: '/ingresar'
       path: '/ingresar'
       fullPath: '/ingresar'
       preLoaderRoute: typeof IngresarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mesas': {
+      id: '/mesas'
+      path: '/mesas'
+      fullPath: '/mesas'
+      preLoaderRoute: typeof MesasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/personal': {
@@ -219,7 +259,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdministracionRoute: AdministracionRoute,
   ConfirmarRoute: ConfirmarRoute,
+  HorariosRoute: HorariosRoute,
   IngresarRoute: IngresarRoute,
+  MesasRoute: MesasRoute,
   PersonalRoute: PersonalRoute,
   ReservarRoute: ReservarRoute,
   ConfirmadaIdRoute: ConfirmadaIdRoute,

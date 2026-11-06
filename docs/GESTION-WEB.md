@@ -8,7 +8,11 @@ Iniciar los servicios con `pnpm.cmd dev` y abrir `http://127.0.0.1:5173/`.
 
 - CUSTOMER: reservas propias y fidelización.
 - STAFF: enlace **Agenda**, únicamente sucursales activas asignadas.
-- ADMIN: enlaces **Agenda** y **Administración**, con alcance global según la API.
+- ADMIN: enlaces **Agenda**, **Administración** y **Mesas**, con alcance global según la API.
+
+Desde el 6 de noviembre, STAFF también ve **Mesas**, limitado a sus sucursales activas asignadas. ADMIN dispone además de **Gestionar mesas** dentro de cada sucursal en Administración. Ver [MESAS-WEB.md](MESAS-WEB.md) para alta, capacidad y estados, confirmaciones y conflictos con reservas. No se requieren nuevas migraciones para estos formularios.
+
+También está disponible **Horarios**, con servicio semanal, excepciones por fecha y consulta efectiva, para ADMIN y STAFF autorizado. ADMIN tiene el enlace **Gestionar horarios** en cada sucursal. La interfaz contempla servicios nocturnos, cierres, eliminación y conflictos por reservas; ver [HORARIOS-WEB.md](HORARIOS-WEB.md).
 
 El login dirige al área correspondiente. Recargar conserva la sesión de la pestaña. Las pantallas muestran acceso denegado a roles incompatibles, y la API verifica el rol actual y la asignación en cada operación; ocultar enlaces no reemplaza esa autorización.
 
@@ -58,9 +62,13 @@ Los teléfonos y coordenadas existentes pueden reemplazarse, pero la API actual 
 
 ## Alcance pendiente
 
-Esta entrega cubre sucursales, agenda, resultados, cancelaciones, usuarios, asignaciones y puntos. Todavía no hay formularios web para mesas, horarios, excepciones ni bloqueos: sus endpoints siguen disponibles en Swagger. Tampoco hay búsqueda de usuarios en el servidor, creación pública de administradores, corrección de resultados terminales ni automatización de ausencias.
+Esta entrega cubre sucursales con imágenes, mesas, horarios, excepciones, agenda, resultados, cancelaciones, usuarios, asignaciones y puntos. Todavía no hay formularios web para bloqueos temporales: sus endpoints siguen disponibles en Swagger. Tampoco hay búsqueda de usuarios en el servidor, creación pública de administradores, corrección de resultados terminales ni automatización de ausencias.
 
 ## Verificación
+
+Horarios y excepciones también quedaron verificados el 6 de noviembre: compilación web, tipos, 25 pruebas existentes y diez recorridos de navegador aprobados en total, incluidos servicios nocturnos, cierres, reapertura, eliminación, solapamientos y reservas protegidas. La API y las migraciones permanecen iguales; ver [HORARIOS-WEB.md](HORARIOS-WEB.md).
+
+Ampliación del 6 de noviembre: gestión de mesas validada con compilación web, tipos, las 25 pruebas existentes y ocho recorridos de navegador aprobados en total, en escritorio y móvil. Incluye capacidad, estados, disponibilidad, reservas vigentes, aislamiento por sucursal y respuestas inciertas; ver [MESAS-WEB.md](MESAS-WEB.md). No hay cambios de backend ni migraciones en esta ampliación.
 
 Recorridos de navegador con usuarios y sucursales temporales en PostgreSQL, en escritorio y móvil: acceso por rol, aislamiento de sucursal, asistencia y ausencia con puntos, cancelación con motivo, auditoría, ajuste con respuesta de red perdida y reintento después de recargar sin duplicación, cambio de rol y asignación. Se conserva el recorrido de cliente y encuesta. Las pruebas eliminan sus propios datos; ejecutar solo contra desarrollo.
 

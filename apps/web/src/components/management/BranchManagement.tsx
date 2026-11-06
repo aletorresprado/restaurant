@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { CreateBranchSchema, UpdateBranchSchema } from '@repo/validation';
 import { api, post, ApiError, errorMessage, type Branch } from '@/lib/api';
-import { Button, Field, Notice, inputClass } from '@/components/kit';
+import { Button, Field, Notice, inputClass, buttonVariants } from '@/components/kit';
 import { QueryError, useManagedBranches } from './common';
 import { BranchPhoto } from './BranchPhoto';
 
@@ -86,6 +87,28 @@ export function BranchManagement() {
                   <span className="sr-only">Editar {branch.name}</span>
                 </Button>
                 <BranchPhoto branch={branch} />
+                <Link
+                  to="/mesas"
+                  search={{ sucursal: branch.id }}
+                  className={buttonVariants({
+                    variant: 'secondary',
+                    size: 'sm',
+                    className: 'mt-4',
+                  })}
+                >
+                  Gestionar mesas
+                </Link>
+                <Link
+                  to="/horarios"
+                  search={{ sucursal: branch.id }}
+                  className={buttonVariants({
+                    variant: 'secondary',
+                    size: 'sm',
+                    className: 'mt-4 ml-2',
+                  })}
+                >
+                  Gestionar horarios
+                </Link>
               </li>
             ))}
           </ul>

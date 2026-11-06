@@ -9,12 +9,16 @@ import { cn } from '@/lib/utils';
 export const Route = createFileRoute('/ingresar')({
   validateSearch: (
     value: Record<string, unknown>,
-  ): { continuar?: 'confirmar' | 'mis-reservas' | 'personal' | 'administracion' } => ({
+  ): {
+    continuar?: 'confirmar' | 'mis-reservas' | 'personal' | 'administracion' | 'mesas' | 'horarios';
+  } => ({
     continuar:
       value.continuar === 'confirmar' ||
       value.continuar === 'mis-reservas' ||
       value.continuar === 'personal' ||
-      value.continuar === 'administracion'
+      value.continuar === 'administracion' ||
+      value.continuar === 'mesas' ||
+      value.continuar === 'horarios'
         ? value.continuar
         : undefined,
   }),
@@ -53,15 +57,20 @@ function Login() {
       await signIn(mode, result.data);
       const role = getSession()?.user.role;
       const destination =
-        role === 'ADMIN'
-          ? continuar === 'personal'
-            ? '/personal'
-            : '/administracion'
-          : role === 'STAFF'
-            ? '/personal'
-            : continuar === 'confirmar' && pending
-              ? '/confirmar'
-              : '/mis-reservas';
+        (role === 'ADMIN' || role === 'STAFF') &&
+        (continuar === 'mesas' || continuar === 'horarios')
+          ? continuar === 'mesas'
+            ? '/mesas'
+            : '/horarios'
+          : role === 'ADMIN'
+            ? continuar === 'personal'
+              ? '/personal'
+              : '/administracion'
+            : role === 'STAFF'
+              ? '/personal'
+              : continuar === 'confirmar' && pending
+                ? '/confirmar'
+                : '/mis-reservas';
       await navigate({ to: destination });
     } catch (error) {
       setError(errorMessage(error));

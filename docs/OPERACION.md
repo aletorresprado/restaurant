@@ -31,7 +31,7 @@ PATCH `/tables/:tableId`:
 { "capacity": 6, "tableStatus": "OUT_OF_SERVICE" }
 ```
 
-Estados: ACTIVE (operativa), BLOCKED (bloqueo administrativo persistente) y OUT_OF_SERVICE (fuera de servicio). No hay campo redundante `isActive`. Modificar el estado no elimina bloqueos temporales. No hay eliminación permanente por HTTP ni traslado de mesas entre sucursales.
+Estados: ACTIVE (operativa), BLOCKED (bloqueo administrativo persistente) y OUT_OF_SERVICE (fuera de servicio). No hay campo redundante `isActive`. Modificar el estado no elimina bloqueos temporales. No hay eliminación permanente por HTTP ni traslado de mesas entre sucursales. Desde el 6 de noviembre de 2026 estas mesas se gestionan también desde la [sección web Mesas](MESAS-WEB.md), manteniendo los mismos endpoints y reglas.
 
 ## Horario semanal
 
@@ -52,6 +52,8 @@ Días ISO: 1 lunes a 7 domingo. Un servicio por día semanal; no se implementan 
 Un día sin horario activo no inicia servicio. Puede tener aún el final del servicio nocturno anterior. `isActive: false` conserva la configuración; DELETE la elimina. Se rechazan servicios activos superpuestos, incluidos domingo y lunes. Se pueden tocar sus extremos.
 
 ## Excepciones por fecha
+
+Desde el 6 de noviembre de 2026, horarios semanales y excepciones se gestionan también desde la [sección web Horarios](HORARIOS-WEB.md), manteniendo estas mismas reglas y endpoints. Incluye consulta del servicio efectivo y errores de solapamiento/reservas.
 
 POST `/schedule-exceptions` para cerrar el servicio de una fecha:
 

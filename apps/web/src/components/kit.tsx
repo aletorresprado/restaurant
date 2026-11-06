@@ -241,6 +241,28 @@ export function SiteHeader() {
               Administración
             </Link>
           )}
+          {(user?.role === 'STAFF' || user?.role === 'ADMIN') && (
+            <Link
+              to="/mesas"
+              className={cn(
+                'rounded-full px-3 py-2 hover:bg-secondary',
+                path === '/mesas' && 'bg-secondary font-semibold',
+              )}
+            >
+              Mesas
+            </Link>
+          )}
+          {(user?.role === 'STAFF' || user?.role === 'ADMIN') && (
+            <Link
+              to="/horarios"
+              className={cn(
+                'rounded-full px-3 py-2 hover:bg-secondary',
+                path === '/horarios' && 'bg-secondary font-semibold',
+              )}
+            >
+              Horarios
+            </Link>
+          )}
           <Link
             to="/mis-reservas"
             className={cn(

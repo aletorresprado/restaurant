@@ -6,6 +6,8 @@ El repositorio de Lovable permanece separado y sin modificaciones. Esta integrac
 
 ## Alcance
 
+Actualización del 6 de noviembre de 2026: secciones Mesas y Horarios para ADMIN/STAFF con sucursal autorizada. Incluyen capacidad/estados, servicios semanales, excepciones por fecha, consulta efectiva y conflictos de reservas/solapamientos. Compilación web, tipos, 25 pruebas existentes y diez recorridos de navegador aprobados. Sin cambios en backend, dependencias ni migraciones. Ver [MESAS-WEB.md](MESAS-WEB.md) y [HORARIOS-WEB.md](HORARIOS-WEB.md).
+
 Actualización del 3 de noviembre de 2026: agenda y administración verificadas con compilación, tipos, 23 pruebas de API/web y cuatro recorridos de navegador aprobados, incluidos roles, puntos y reintentos después de una respuesta de red perdida. Detalles en [GESTION-WEB.md](GESTION-WEB.md).
 
 Actualización del 4 de noviembre de 2026: formularios de sucursales y elección de imágenes propias para las tarjetas del inicio. Se cubren altas, edición, estados, conflictos de reservas, catálogo público y respuesta incierta de creación; también subida, reemplazo y borrado de fotos con persistencia PostgreSQL. Esta última función agrega una migración y endpoints de imágenes, sin modificar reglas de reservas. Ver [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md). Validación: compilación, tipos, 25 pruebas de API/web, integración PostgreSQL ampliada y recorridos de escritorio/móvil.
@@ -20,7 +22,7 @@ Actualización del 4 de noviembre de 2026: formularios de sucursales y elección
 - Cancelación con confirmación y motivo opcional, según la regla vigente del backend.
 - Restauración de sesión, renovación coordinada por pestaña y logout con revocación del refresh token.
 
-Desde el 3 de noviembre hay agenda para STAFF/ADMIN y administración de usuarios, asignaciones y puntos para ADMIN. Desde el 4 de noviembre, ADMIN también dispone de formularios para crear, editar y activar/desactivar sucursales. El login dirige al área del rol; la confirmación de nuevas reservas sigue reservada a CUSTOMER. Ver [GESTION-WEB.md](GESTION-WEB.md). La configuración web de mesas, horarios, excepciones y bloqueos sigue pendiente.
+Desde el 3 de noviembre hay agenda para STAFF/ADMIN y administración de usuarios, asignaciones y puntos para ADMIN. Desde el 4 de noviembre, ADMIN dispone de formularios para sucursales y sus imágenes; desde el 6, STAFF/ADMIN también gestionan mesas, horarios semanales y excepciones según sus sucursales autorizadas. Ver [MESAS-WEB.md](MESAS-WEB.md) y [HORARIOS-WEB.md](HORARIOS-WEB.md). El login dirige al área del rol; la confirmación de nuevas reservas sigue reservada a CUSTOMER. La configuración web de bloqueos temporales sigue pendiente.
 
 ## Inicio local
 

@@ -1,6 +1,6 @@
 # Plan de desarrollo de App Resto
 
-Actualizado: 4 de noviembre de 2026.
+Actualizado: 6 de noviembre de 2026.
 
 ## Objetivo
 
@@ -111,7 +111,9 @@ Criterio de cierre: los eventos generan los puntos esperados una sola vez, inclu
 - [x] Administración de usuarios CUSTOMER/STAFF, asignaciones y fidelización con ajustes auditados y reintentos seguros en la misma pestaña.
 - [x] Formularios de alta/edición/activación/desactivación de sucursales, con validaciones compartidas, conflictos por reservas vigentes y tratamiento de altas con respuesta incierta.
 - [x] Imagen propia por sucursal: selección, vista previa, carga/reemplazo/borrado ADMIN, persistencia PostgreSQL y tarjetas del inicio con respaldo general.
-- [ ] Formularios de mesas, horarios, excepciones y bloqueos.
+- [x] Gestión web de mesas por sucursal autorizada: listado paginado, alta, capacidad, estados, confirmación y errores por reservas vigentes.
+- [x] Horarios semanales y excepciones desde la web: altas, edición, cierres/desactivación/eliminación con confirmación, servicio por fecha y conflictos de la API.
+- [ ] Formularios de bloqueos temporales por mesa.
 
 Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual, pero se eliminan datos ficticios y funciones que nuestra API no ofrece. Ver [FRONTEND.md](FRONTEND.md) para procedencia y [GESTION-WEB.md](GESTION-WEB.md) para agenda, administración y verificación. La etapa 6 sigue abierta por configuración operativa y revisión de sesiones.
 
@@ -130,21 +132,23 @@ Criterio de cierre: despliegue reproducible con configuración separada, respald
 
 Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye seguridad de autenticación, reconciliación de reintentos de reserva, CI, entorno de prueba, migraciones, restauración y validación del primer lanzamiento. Todos esos controles de publicación siguen pendientes.
 
-## Punto de reanudación — actualizado el 4 de noviembre de 2026
+## Punto de reanudación — actualizado el 6 de noviembre de 2026
 
-Entrega actual: fidelización persistente, agenda/administración web, formularios de sucursales e imágenes propias para el inicio. El propietario confirmó el acceso ADMIN y probó los formularios; su aporte originó la selección de imágenes. Documentación de uso y decisiones en [FIDELIZACION.md](FIDELIZACION.md), [GESTION-WEB.md](GESTION-WEB.md) e [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
+Entrega actual: fidelización persistente, agenda/administración web, sucursales con imágenes propias y gestión de mesas, horarios y excepciones. El propietario confirmó el acceso ADMIN y probó sucursales y mesas. Documentación en [FIDELIZACION.md](FIDELIZACION.md), [GESTION-WEB.md](GESTION-WEB.md), [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md), [MESAS-WEB.md](MESAS-WEB.md) y [HORARIOS-WEB.md](HORARIOS-WEB.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
 
 Para retomar, seguir este orden:
 
-La próxima entrega comienza con **gestión de mesas desde la web**: elegir una sucursal autorizada, listar/crear mesas y editar capacidad o estado, mostrando los conflictos de la API con reservas vigentes. Después seguir con horarios, excepciones y bloqueos. La etapa 6 permanece abierta.
+La próxima entrega comienza con **bloqueos temporales por mesa desde la web**: intervalos de fechas/horas en la zona del restaurante, consulta, alta y retirada, con los controles existentes de solapamiento y reservas. La etapa 6 permanece abierta hasta completarlos y revisar las sesiones antes de producción.
 
 1. Iniciar `pnpm.cmd dev` y comprobar el acceso con una cuenta ADMIN. Si no existe, ejecutar el comando interactivo de `GESTION-WEB.md`; no promover cuentas directamente en la base ni guardar credenciales en Git.
 2. Probar **Administración → Sucursales**: altas, edición y activación/desactivación ya implementadas. Una sucursal nueva no ofrece turnos hasta configurar mesas y horarios.
-3. Agregar gestión de mesas y estados, horarios semanales, excepciones por fecha y bloqueos desde sucursales autorizadas. Mantener zona del restaurante, cruce de medianoche y validaciones de la API.
+3. Probar **Mesas** y **Horarios**: alta, capacidad, estados, servicios semanales, excepciones y consulta efectiva ya implementados. Continuar con bloqueos temporales por mesa. Mantener zona del restaurante, cruce de medianoche y validaciones de la API.
 4. Ampliar los recorridos de navegador para esa configuración, incluyendo permisos, conflictos y pantallas pequeñas. Actualizar README y este plan con cada entrega.
 5. Resolver sesiones/operaciones entre pestañas y continuar con los controles de producción de la etapa 7. No marcar la etapa 6 completa antes de cubrir los formularios pendientes y su verificación.
 
 Verificado al 4 de noviembre: compilación del monorepo, tipos, 17 pruebas de API y 8 de web, integración PostgreSQL ampliada con imágenes y seis recorridos Playwright (cliente, gestión y sucursales, escritorio y móvil). Incluyen fotos propias del inicio, recarga, reemplazo/borrado, conflictos de desactivación, alta incierta y ajuste con respuesta perdida sin duplicar movimientos. La sexta migración `20261104000100_branch_images` se aplicó localmente. Sin dependencias ni servicios externos adicionales. Las fotos se incluyen en los respaldos de la base; revisar volumen/optimización al preparar producción.
+
+Verificado al 6 de noviembre: compilación web, tipos, las 25 pruebas de API/web y diez recorridos de navegador aprobados (cliente, gestión, sucursales, mesas y horarios, escritorio/móvil). Mesas incluye disponibilidad, conflictos CONFIRMED/ATTENDED, permisos, paginación y conservación de cambios concurrentes. Horarios incluye medianoche, intervalos, cierres/reapertura, solapamientos, borrado de excepciones que restauraría un conflicto, reservas protegidas y alta con respuesta incierta. Solo se modificó la interfaz y su documentación, sin backend ni migraciones nuevas. Detalles en [MESAS-WEB.md](MESAS-WEB.md) y [HORARIOS-WEB.md](HORARIOS-WEB.md).
 
 También se corrigió la restauración demorada de perfil al cambiar de cuenta: una respuesta de la cuenta anterior no sobrescribe la nueva. El recorrido de gestión reproduce ese caso con una respuesta retenida; esto no resuelve todavía la coordinación de sesiones entre pestañas.
 

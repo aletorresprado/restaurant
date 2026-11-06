@@ -7,9 +7,11 @@ import { Button, Container, Notice, buttonVariants } from '@/components/kit';
 
 export function ManagementAccess({
   admin = false,
+  continueTo,
   children,
 }: {
   admin?: boolean;
+  continueTo?: 'mesas' | 'horarios';
   children: ReactNode;
 }) {
   const { user, ready } = useStore();
@@ -27,7 +29,7 @@ export function ManagementAccess({
           action={
             <Link
               to="/ingresar"
-              search={{ continuar: admin ? 'administracion' : 'personal' }}
+              search={{ continuar: continueTo ?? (admin ? 'administracion' : 'personal') }}
               className={buttonVariants()}
             >
               Ingresar
