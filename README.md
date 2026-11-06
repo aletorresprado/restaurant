@@ -166,6 +166,14 @@ Las cuentas STAFF ingresan a **Agenda** (`/personal`): sucursal asignada, fecha 
 
 Si solo hay cuentas de cliente, crear un administrador separado con `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-admin.ps1` desde la raíz. Pide un correo nuevo y una contraseña oculta; no cambia cuentas existentes ni guarda credenciales en archivos. Luego salir de la app e ingresar con esa cuenta. Ver [GESTION-WEB.md](docs/GESTION-WEB.md) para uso, pruebas y límites.
 
+Si olvidaste la contraseña de una cuenta de desarrollo existente, ejecutar desde la raíz:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\reset-local-password.ps1 -Email "tu-correo@example.com"
+```
+
+Pide una nueva contraseña oculta (mínimo 8 caracteres, una mayúscula y un número; máximo 72 bytes). Solo admite `NODE_ENV=development` y PostgreSQL local `app_resto_dev`. Conserva cuenta, rol, reservas y puntos; actualiza el hash y elimina sus sesiones de renovación en una transacción. Los access tokens existentes siguen vigentes hasta vencer; cerrar sesión y volver a ingresar en la web o generar otro token en Swagger. No reactiva cuentas desactivadas, no envía correos ni guarda contraseñas en archivos. Es una herramienta del operador local, no recuperación pública de contraseña. Verificación con cuentas temporales: `pnpm.cmd --filter @repo/api exec node --test scripts/reset-local-password.test.cjs`.
+
 **Mesas** (`/mesas`) permite a ADMIN y STAFF autorizado elegir sucursal, listar mesas con paginación, crear con capacidad 1–50 y editar capacidad/estado. ADMIN también llega desde **Administración → Sucursales → Gestionar mesas** y puede configurar sucursales inactivas. El número queda fijo y es único dentro de cada sucursal. Los cambios a Bloqueada o Fuera de servicio requieren confirmación, y la API impide afectar reservas vigentes. No hay borrado permanente. Ver [MESAS-WEB.md](docs/MESAS-WEB.md) para el recorrido, pruebas y límites. Esta entrega no requiere nuevas dependencias ni migraciones.
 
 **Horarios** (`/horarios`) permite gestionar el servicio semanal y las excepciones por fecha: alta, edición, activación/desactivación y eliminación con confirmación cuando corresponde. Incluye consulta del servicio efectivo por fecha, horarios nocturnos y errores de solapamiento o reservas vigentes. ADMIN también llega desde cada sucursal con **Gestionar horarios**; STAFF queda limitado a sus sucursales activas asignadas. Las horas se interpretan en la zona del restaurante, no la del navegador. Ver [HORARIOS-WEB.md](docs/HORARIOS-WEB.md). Usa la API existente, sin migraciones ni dependencias nuevas.
@@ -190,6 +198,8 @@ pnpm.cmd --filter @repo/api exec prisma validate
 Las 17 pruebas de API cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas, cancelación y tiempos de asistencia/ausencia. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
 
 El frontend agrega pruebas de renovación de sesión, errores de conexión, logout y fechas; `pnpm.cmd test` incluye API y web. Para el recorrido real en navegador, después de compilar e instalar Chromium con `pnpm.cmd --filter @repo/web exec playwright install chromium`, ejecutar `pnpm.cmd --filter @repo/web test:e2e`. Usa PostgreSQL de desarrollo y recursos temporales propios. Detalles y límites de sesión en [FRONTEND.md](docs/FRONTEND.md).
+
+**Sesiones por pestaña:** cada pestaña inicia su propia sesión; cerrar una no cierra las demás. La recarga conserva el acceso cuando el navegador admite Web Locks. Duplicar una pestaña con sesión pide ingresar en la copia y conserva la original, evitando competir por un refresh token de un solo uso. Sin esa protección se permite login en memoria, sin restaurarlo al recargar. Las respuestas pendientes de otro inicio de sesión no se muestran ni se reenvían bajo el nuevo. No cambia el contrato de la API ni requiere migraciones/dependencias. Los tokens siguen en `sessionStorage`, accesibles a JavaScript: la revisión de almacenamiento para producción e idempotencia de reservas permanece pendiente. Ver [SESIONES-WEB.md](docs/SESIONES-WEB.md) para alcance, pruebas y límites.
 
 Para probar contra una base real ya migrada, compilar y ejecutar `pnpm.cmd --filter @repo/api test:integration`. Comprueba autenticación, permisos y operación; además prueba disponibilidad, reserva concurrente, asignación por capacidad, privacidad, agenda, cancelación y protección de configuración. Inicia una API temporal y elimina sus propios usuarios, sesiones, sucursales y recursos asociados, incluidas reservas y eventos. No ejecutarlo contra producción.
 

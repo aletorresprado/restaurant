@@ -105,7 +105,8 @@ Criterio de cierre: los eventos generan los puntos esperados una sola vez, inclu
 - [x] Sucursales reales, fecha de servicio, grupo, disponibilidad y confirmación sin cambiar reglas de negocio.
 - [x] Reservas propias, detalle, eventos y cancelación, con carga, errores y estados vacíos.
 - [x] Pruebas de cliente HTTP y recorrido de navegador en escritorio y móvil contra PostgreSQL.
-- [ ] Política de sesión entre pestañas y revisión del almacenamiento antes de producción.
+- [ ] Cerrar la revisión del almacenamiento y la recuperación de operaciones inciertas antes de producción.
+- [x] Sesiones independientes por pestaña y detección de copias mediante Web Locks; aislamiento de respuestas, renovación y logout al cambiar de login. Sin Web Locks, ingreso en memoria sin restauración tras recargar. Falta cerrar la revisión de almacenamiento/operaciones para producción.
 - [x] Consulta de asistencia en detalle, saldo/nivel/historial en Mis reservas y encuesta tras una visita finalizada.
 - [x] Agenda de sucursales autorizadas, asistencia, ausencia, cancelación e historial desde la web.
 - [x] Administración de usuarios CUSTOMER/STAFF, asignaciones y fidelización con ajustes auditados y reintentos seguros en la misma pestaña.
@@ -139,7 +140,11 @@ Entrega actual: fidelización persistente con estrellas de niveles, agenda/admin
 
 Para retomar, seguir este orden:
 
-La próxima entrega comienza con **revisión de sesiones y almacenamiento para producción**: coordinación entre pestañas, renovación/logout y recuperación de operaciones inciertas. Diseñar y probar la política antes de cambiar el contrato de autenticación; después continuar con los controles de la etapa 7. No considerar el proyecto listo para producción por completar los formularios operativos.
+La revisión actual aborda **sesiones y almacenamiento para producción**: coordinación entre pestañas, renovación/logout y recuperación de operaciones inciertas. La política se documenta y prueba antes de cambiar el contrato de autenticación; después se continuará con los controles de la etapa 7. No considerar el proyecto listo para producción por completar los formularios operativos.
+
+Avance de sesiones: se implementó la política de pestañas independientes, bloqueo de copias, renovación por sesión y descarte de respuestas de otro login. Ver [SESIONES-WEB.md](SESIONES-WEB.md). Próximo paso: idempotencia/reconciliación de reservas y recuperación de operaciones inciertas al recargar; luego cerrar la decisión de almacenamiento para producción y los controles de la etapa 7. La etapa 6 sigue en curso. Esta entrega no cambia el contrato de autenticación ni requiere migraciones o dependencias nuevas.
+
+Comprobaciones de la entrega de sesiones: 33 pruebas unitarias (17 API y 16 web), tipos del monorepo y compilación web. El navegador amplía la suite a dieciséis recorridos (ocho por escritorio/móvil), incluyendo pestaña copiada, sesiones independientes de una misma cuenta, otra cuenta, dos renovaciones simultáneas, logout aislado y funcionamiento en memoria sin Web Locks. Los límites de almacenamiento y operaciones inciertas se conservan documentados.
 
 1. Iniciar `pnpm.cmd dev` y comprobar el acceso con una cuenta ADMIN. Si no existe, ejecutar el comando interactivo de `GESTION-WEB.md`; no promover cuentas directamente en la base ni guardar credenciales en Git.
 2. Probar **Administración → Sucursales**: altas, edición y activación/desactivación ya implementadas. Una sucursal nueva no ofrece turnos hasta configurar mesas y horarios.
@@ -153,11 +158,13 @@ Verificado al 6 de noviembre: compilación web, tipos, las 25 pruebas de API/web
 
 Ampliación posterior del 6 de noviembre: bloqueos temporales y estrellas de niveles, con compilación web, tipos, **28 pruebas (17 API + 11 web) y doce recorridos de navegador aprobados**. Los bloqueos se prueban con navegador en Pacific/Auckland para verificar la conversión del restaurante, además de cruces, reservas protegidas, retirada, paginación y respuesta perdida. Los recorridos de cliente/administración verifican nombres e iconos de niveles. Se declaran en la web date-fns/date-fns-tz, versiones ya utilizadas por el monorepo; actualizar dependencias con el lockfile. Sin cambios de backend ni migraciones.
 
-También se corrigió la restauración demorada de perfil al cambiar de cuenta: una respuesta de la cuenta anterior no sobrescribe la nueva. El recorrido de gestión reproduce ese caso con una respuesta retenida; esto no resuelve todavía la coordinación de sesiones entre pestañas.
+También se corrigió la restauración demorada de perfil al cambiar de cuenta: una respuesta de la cuenta anterior no sobrescribe la nueva. El recorrido de gestión reproduce ese caso con una respuesta retenida. La entrega de sesiones amplía esa protección a peticiones autenticadas y separa las sesiones entre pestañas; la coordinación de operaciones inciertas sigue pendiente.
 
 Límites que deben conservarse visibles: resultados de asistencia definitivos, ausencia manual, historial anterior sin recalcular automáticamente, sin canjes ni vencimiento de puntos, sin coordinación de ajustes entre pestañas y sin recuperación/verificación de correo. Ver la hoja de ruta antes de publicar.
 
 ## Comandos de comprobación
+
+Soporte local añadido: `scripts/reset-local-password.ps1 -Email <correo>` permite al operador restablecer una contraseña olvidada sin perder los datos de la cuenta. Limitado a PostgreSQL local de desarrollo; invalida sesiones de renovación, pero no access tokens ya emitidos. Comprobado con una prueba contra PostgreSQL que usa cuentas temporales: hash nuevo válido, contraseña anterior rechazada, datos de perfil/rol/saldo conservados, validación de contraseña y sesiones de otra cuenta intactas. No completa la recuperación pública por correo pendiente en la etapa 7. Uso en README.
 
 Desde la raíz del repositorio:
 

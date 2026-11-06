@@ -16,7 +16,7 @@ También está disponible **Horarios**, con servicio semanal, excepciones por fe
 
 En cada mesa se abre **Bloqueos temporales** para consultar intervalos, crear con revisión/confirmación y retirar. Se usan fechas y horas del restaurante aunque el navegador esté en otra zona. Retirar un intervalo no cambia el estado general de la mesa. Ver [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md). Los niveles de puntos se muestran ahora con estrella de color y nombre, con una leyenda de los cinco niveles en Mis puntos.
 
-El login dirige al área correspondiente. Recargar conserva la sesión de la pestaña. Las pantallas muestran acceso denegado a roles incompatibles, y la API verifica el rol actual y la asignación en cada operación; ocultar enlaces no reemplaza esa autorización.
+El login dirige al área correspondiente. Recargar conserva la sesión de la pestaña cuando se puede proteger con Web Locks. Cada pestaña tiene un login independiente; una copia de una sesión ya en uso pide ingresar nuevamente, sin cerrar la original. Sin Web Locks, el login funciona en memoria hasta recargar. Ver [SESIONES-WEB.md](SESIONES-WEB.md). Las pantallas muestran acceso denegado a roles incompatibles, y la API verifica el rol actual y la asignación en cada operación; ocultar enlaces no reemplaza esa autorización.
 
 Si todavía no hay un administrador, crearlo explícitamente desde una segunda terminal en la raíz del proyecto:
 

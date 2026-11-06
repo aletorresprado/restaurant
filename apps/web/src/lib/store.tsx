@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
   api,
+  establishSession,
   getSession,
+  getSessionIdentity,
   logoutSession,
   onSessionChange,
   post,
@@ -56,7 +58,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           q.queryKey[0] === 'management',
       });
     });
-    restoreSession();
+    let cancelled = false;
     try {
       const value = SelectionSchema.safeParse(
         JSON.parse(sessionStorage.getItem('app-resto-selection') ?? 'null'),
@@ -65,23 +67,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       /* No persisted selection. */
     }
-    if (!getSession()) {
-      setReady(true);
-      return unsubscribe;
-    }
-    const restoringUserId = getSession()?.user.id;
-    api<User>('/auth/me', {}, true)
-      .then((value) => {
-        const session = getSession();
-        if (session && session.user.id === restoringUserId && value.id === restoringUserId)
-          setSession({ ...session, user: value });
+    void restoreSession()
+      .then(async (message) => {
+        if (cancelled) return;
+        if (message) setAuthError(message);
+        if (!getSession()) return;
+        const restoringUserId = getSession()?.user.id;
+        const restoringIdentity = getSessionIdentity();
+        await api<User>('/auth/me', {}, true)
+          .then((value) => {
+            const session = getSession();
+            if (
+              getSessionIdentity() === restoringIdentity &&
+              session &&
+              session.user.id === restoringUserId &&
+              value.id === restoringUserId
+            )
+              setSession({ ...session, user: value });
+          })
+          .catch((error) => {
+            if (
+              getSessionIdentity() === restoringIdentity &&
+              getSession()?.user.id === restoringUserId
+            )
+              setAuthError(
+                error instanceof Error ? error.message : 'No se pudo verificar tu sesión.',
+              );
+          });
       })
-      .catch((error) => {
-        if (getSession()?.user.id === restoringUserId)
-          setAuthError(error instanceof Error ? error.message : 'No se pudo verificar tu sesión.');
-      })
-      .finally(() => setReady(true));
-    return unsubscribe;
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [client]);
   const branches = useQuery({
     queryKey: ['branches'],
@@ -113,7 +133,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const signIn = async (mode: 'login' | 'register', body: unknown) => {
     const session = await post<Session>(`/auth/${mode}`, body);
     client.clear();
-    setSession(session);
+    await establishSession(session);
     setAuthError('');
   };
   const signOut = async () => {

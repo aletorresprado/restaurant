@@ -4,9 +4,9 @@ Actualizado: 6 de noviembre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay seis migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes e imágenes de sucursales. El frontend agrega 11 pruebas y doce recorridos de navegador aprobados contra la base real: cliente, gestión, sucursales, mesas, horarios y bloqueos en escritorio/móvil. Incluyen zona del restaurante distinta de la del navegador, reservas protegidas, respuestas perdidas y estrellas de niveles. La etapa 6 sigue abierta por sesiones/almacenamiento y coordinación entre pestañas.
+Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay seis migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes e imágenes de sucursales. El frontend agrega 16 pruebas unitarias y dieciséis recorridos de navegador contra la base real: cliente, gestión, sucursales, mesas, horarios, bloqueos y sesiones en escritorio/móvil. Incluyen zona del restaurante distinta de la del navegador, reservas protegidas, respuestas perdidas, estrellas de niveles y pestañas independientes. La etapa 6 sigue abierta por revisión del almacenamiento y operaciones inciertas entre pestañas/recargas.
 
-La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones y puntos; siguen pendientes los formularios de configuración operativa, infraestructura e integración continua.
+La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones, puntos y configuración operativa. Siguen pendientes infraestructura e integración continua.
 
 ## 1. Asistencia y fidelización — etapa 5 completada; mejoras operativas pendientes
 
@@ -42,7 +42,7 @@ La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplic
 
 Cierre: una persona puede completar los recorridos del producto sin depender de Swagger, incluidos errores y recuperación de sesión.
 
-El recorrido del cliente y la gestión del restaurante se conectan a la API real. Ver [FRONTEND.md](FRONTEND.md) y [GESTION-WEB.md](GESTION-WEB.md). El almacenamiento actual usa sessionStorage, no cookies HttpOnly; requiere revisión de seguridad y coordinación entre pestañas antes del lanzamiento. Los formularios de configuración operativa siguen pendientes.
+El recorrido del cliente y la gestión del restaurante se conectan a la API real. Ver [FRONTEND.md](FRONTEND.md) y [GESTION-WEB.md](GESTION-WEB.md). La política de sesiones independientes por pestaña y protección de copias mediante Web Locks está implementada; ver [SESIONES-WEB.md](SESIONES-WEB.md). El almacenamiento actual usa sessionStorage, no cookies HttpOnly; requiere cerrar su revisión de seguridad antes del lanzamiento. Continúan pendientes idempotencia de reservas y coordinación de operaciones inciertas entre pestañas/recargas.
 
 ## 3. Preparar seguridad y operación — etapa 7, pendiente
 

@@ -104,6 +104,10 @@ function Login() {
       <h1 className="mt-6 text-3xl font-semibold">
         {mode === 'login' ? 'Ingresá a tu cuenta' : 'Creá tu cuenta'}
       </h1>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Cada pestaña tiene su propia sesión. Si abrís otra, ingresá allí también. Cerrar sesión
+        afecta solo a esta pestaña.
+      </p>
       {pending && continuar === 'confirmar' && (
         <div className="mt-4">
           <Notice title="Guardamos tu selección">

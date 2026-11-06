@@ -85,4 +85,96 @@ describe('authenticated API client', () => {
     expect(blob.type).toBe('image/png');
     expect(await blob.text()).toBe('photo');
   });
+  it('rejects an old successful read after changing accounts', async () => {
+    let complete!: (value: Response) => void;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            complete = resolve;
+          }),
+      ),
+    );
+    const pending = api('/auth/me', {}, true);
+    setSession({ ...original, user: { ...user, id: 'another-user' }, refreshToken: 'another' });
+    complete(response(200, user));
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(getSession()?.user.id).toBe('another-user');
+  });
+  it('treats an applied write as uncertain if the session changes before its response', async () => {
+    let complete!: (value: Response) => void;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            complete = resolve;
+          }),
+      ),
+    );
+    const pending = api('/reservations', { method: 'POST', body: '{}' }, true);
+    setSession(null);
+    complete(response(200, { id: 'created' }));
+    await expect(pending).rejects.toMatchObject({ status: 0 });
+  });
+  it('does not replay a request under a new login, even for the same user', async () => {
+    let complete!: (value: Response) => void;
+    const fetcher = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', fetcher);
+    const pending = api('/reservations', { method: 'POST', body: '{}' }, true);
+    setSession({ ...original, accessToken: 'other-login', refreshToken: 'other-refresh' });
+    complete(response(401, {}));
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it('does not clear a new login when a previous logout finishes', async () => {
+    let complete!: (value: Response) => void;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            complete = resolve;
+          }),
+      ),
+    );
+    const pending = logoutSession();
+    setSession({ ...original, accessToken: 'other-login', refreshToken: 'other-refresh' });
+    complete(response(200, { success: true }));
+    await pending;
+    expect(getSession()?.accessToken).toBe('other-login');
+  });
+  it('keeps renewals separate when a previous login still has a refresh in flight', async () => {
+    let completeOldRefresh!: (value: Response) => void;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        if (url.endsWith('/auth/refresh')) {
+          const token = JSON.parse(init.body as string).refreshToken;
+          if (token === 'refresh-old')
+            return new Promise<Response>((resolve) => {
+              completeOldRefresh = resolve;
+            });
+          return response(200, { user, accessToken: 'new-valid', refreshToken: 'new-rotated' });
+        }
+        return (init.headers as Record<string, string>).Authorization === 'Bearer new-valid'
+          ? response(200, { success: true })
+          : response(401, {});
+      }),
+    );
+    const oldRequest = api('/old', {}, true);
+    const oldRejection = expect(oldRequest).rejects.toMatchObject({ status: 401 });
+    await vi.waitFor(() => expect(completeOldRefresh).toBeTypeOf('function'));
+    setSession({ ...original, accessToken: 'new-expired', refreshToken: 'new-login' });
+    await expect(api('/new', {}, true)).resolves.toEqual({ success: true });
+    completeOldRefresh(response(401, {}));
+    await oldRejection;
+    expect(getSession()?.accessToken).toBe('new-valid');
+  });
 });

@@ -31,7 +31,7 @@ function SessionNotice() {
   return authError ? (
     <div className="mx-auto max-w-5xl px-5 pt-4">
       <Notice tone="warning" title="No pudimos verificar tu sesión">
-        {authError} Intentá ingresar nuevamente cuando recuperes la conexión.
+        {authError}
       </Notice>
     </div>
   ) : null;

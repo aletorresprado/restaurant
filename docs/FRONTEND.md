@@ -67,7 +67,7 @@ El build genera `apps/web/dist`. Para producción hace falta alojamiento estáti
 
 Los tokens y el usuario se guardan en `sessionStorage` de la pestaña para restaurar sesión al recargar; las reservas se consultan al servidor y no se persisten como datos de demo. El cliente comprueba `/auth/me` al restaurar. Una renovación usa una única petición compartida entre llamadas concurrentes de esa pestaña. Logout espera una renovación en curso antes de revocar su refresh y, si no puede contactar al servidor, informa el error y conserva la sesión para reintentar.
 
-Esta solución es para la integración local actual. No utiliza cookies HttpOnly ni coordinación entre pestañas; duplicar una pestaña puede copiar su refresh token y competir por la renovación de un solo uso. Antes de producción se debe resolver la política de sesión entre pestañas y revisar almacenamiento, CSP y protección frente a XSS. No se modificó la autenticación del backend para esta entrega.
+La política ahora es de sesiones independientes por pestaña: Web Locks impide restaurar una copia de la sesión que ya está en uso en otra pestaña. La copia pide login sin revocar la original. Sin Web Locks, nuevos ingresos funcionan en memoria y requieren login tras recargar. También se rechazan respuestas autenticadas de un inicio de sesión anterior, sin reenvío bajo otra cuenta. Ver [SESIONES-WEB.md](SESIONES-WEB.md). Siguen pendientes cookies HttpOnly o justificación del almacenamiento actual, CSP y protección frente a XSS antes de producción. No se modificó la autenticación del backend para esta entrega.
 
 No se repiten automáticamente POST de reserva por errores de red, servidor o cupo. Si la confirmación tiene resultado incierto se bloquea el reenvío en esa pantalla y se indica consultar Mis reservas. La API todavía no tiene idempotencia de creación: esa revisión evita un reintento ciego, pero no sustituye una garantía de idempotencia del servidor.
 
@@ -95,6 +95,6 @@ Playwright inicia API y web locales si no están disponibles. Requiere PostgreSQ
 - Agenda y gestión operativa para STAFF; administración global para ADMIN.
 - Asistencia y fidelización cuando se implemente la etapa 5.
 - Recuperación de contraseña y verificación de correo cuando existan sus endpoints.
-- Idempotencia de creación o una reconciliación más completa y sesión entre pestañas para el lanzamiento.
+- Idempotencia de creación o reconciliación más completa entre pestañas/recargas, y cierre de la revisión de almacenamiento para el lanzamiento. Las sesiones independientes por pestaña ya están protegidas.
 - Fotografías y metadatos reales por sucursal, si se incorporan al contrato del producto.
 - Validación de producción de proxy, rutas directas, HTTPS, CSP y privacidad.
