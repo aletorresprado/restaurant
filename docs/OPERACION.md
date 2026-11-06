@@ -88,6 +88,8 @@ Se usa `BUSINESS_CONFIG.timezone` de `@repo/config`; no la zona del navegador o 
 
 ## Bloqueos temporales
 
+Desde el 6 de noviembre de 2026 también se gestionan en **Mesas → Bloqueos temporales**, con los endpoints existentes. La web convierte las fechas/horas del restaurante a instantes ISO, consulta intervalos y permite crear/retirar con confirmación. Ver [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md).
+
 POST `/tables/:tableId/blocks`:
 
 ```json

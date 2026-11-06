@@ -8,7 +8,7 @@ Construir un sistema de reservas y fidelización para un restaurante con varias 
 
 ## Estado y recorrido restante
 
-Las etapas 1 a 5 están implementadas y verificadas en desarrollo local. La etapa 5 incorpora movimientos de puntos, saldo, niveles, encuestas y ajustes auditados. La etapa 6 integra el diseño de Lovable al recorrido real del cliente, agenda del personal y administración de usuarios, asignaciones y puntos. No hay despliegue productivo. Faltan los formularios de configuración operativa y la revisión de sesiones (6), y la preparación del despliegue (7).
+Las etapas 1 a 5 están implementadas y verificadas en desarrollo local. La etapa 5 incorpora movimientos de puntos, saldo, niveles, encuestas y ajustes auditados. La etapa 6 integra el diseño de Lovable al recorrido del cliente y la configuración operativa web: agenda, usuarios/asignaciones, sucursales, mesas, horarios, excepciones y bloqueos. No hay despliegue productivo. Falta revisar sesiones/almacenamiento y coordinación entre pestañas (6), y preparar el despliegue (7).
 
 La [hoja de ruta a producción](PRODUCCION.md) desglosa esos pendientes, las decisiones del propietario y los criterios para publicar. Tener el código subido a GitHub o Swagger accesible localmente no completa la etapa de despliegue.
 
@@ -113,9 +113,10 @@ Criterio de cierre: los eventos generan los puntos esperados una sola vez, inclu
 - [x] Imagen propia por sucursal: selección, vista previa, carga/reemplazo/borrado ADMIN, persistencia PostgreSQL y tarjetas del inicio con respaldo general.
 - [x] Gestión web de mesas por sucursal autorizada: listado paginado, alta, capacidad, estados, confirmación y errores por reservas vigentes.
 - [x] Horarios semanales y excepciones desde la web: altas, edición, cierres/desactivación/eliminación con confirmación, servicio por fecha y conflictos de la API.
-- [ ] Formularios de bloqueos temporales por mesa.
+- [x] Bloqueos temporales por mesa: inicio/fin en zona del restaurante, motivo, revisión/confirmación, consulta paginada, retirada y conflictos de la API.
+- [x] Niveles con estrella de color y nombre, y leyenda de umbrales compartidos en Mis puntos; no cambia la lógica de puntos.
 
-Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual, pero se eliminan datos ficticios y funciones que nuestra API no ofrece. Ver [FRONTEND.md](FRONTEND.md) para procedencia y [GESTION-WEB.md](GESTION-WEB.md) para agenda, administración y verificación. La etapa 6 sigue abierta por configuración operativa y revisión de sesiones.
+Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual y se conectan las funciones reales de la API. Ver [FRONTEND.md](FRONTEND.md) para procedencia y [GESTION-WEB.md](GESTION-WEB.md) para gestión. La configuración operativa principal ya tiene formularios; la etapa 6 sigue abierta por sesiones/almacenamiento y coordinación entre pestañas.
 
 Criterio de cierre: los recorridos principales funcionan desde la interfaz contra la API real, con estados de carga, errores, acceso por rol y uso en pantallas pequeñas.
 
@@ -134,21 +135,23 @@ Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye segurid
 
 ## Punto de reanudación — actualizado el 6 de noviembre de 2026
 
-Entrega actual: fidelización persistente, agenda/administración web, sucursales con imágenes propias y gestión de mesas, horarios y excepciones. El propietario confirmó el acceso ADMIN y probó sucursales y mesas. Documentación en [FIDELIZACION.md](FIDELIZACION.md), [GESTION-WEB.md](GESTION-WEB.md), [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md), [MESAS-WEB.md](MESAS-WEB.md) y [HORARIOS-WEB.md](HORARIOS-WEB.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
+Entrega actual: fidelización persistente con estrellas de niveles, agenda/administración web, sucursales con imágenes y gestión de mesas, horarios, excepciones y bloqueos temporales. El propietario confirmó el acceso ADMIN y probó sucursales, mesas y horarios. Documentación en [FIDELIZACION.md](FIDELIZACION.md), [GESTION-WEB.md](GESTION-WEB.md), [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md), [MESAS-WEB.md](MESAS-WEB.md), [HORARIOS-WEB.md](HORARIOS-WEB.md) y [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
 
 Para retomar, seguir este orden:
 
-La próxima entrega comienza con **bloqueos temporales por mesa desde la web**: intervalos de fechas/horas en la zona del restaurante, consulta, alta y retirada, con los controles existentes de solapamiento y reservas. La etapa 6 permanece abierta hasta completarlos y revisar las sesiones antes de producción.
+La próxima entrega comienza con **revisión de sesiones y almacenamiento para producción**: coordinación entre pestañas, renovación/logout y recuperación de operaciones inciertas. Diseñar y probar la política antes de cambiar el contrato de autenticación; después continuar con los controles de la etapa 7. No considerar el proyecto listo para producción por completar los formularios operativos.
 
 1. Iniciar `pnpm.cmd dev` y comprobar el acceso con una cuenta ADMIN. Si no existe, ejecutar el comando interactivo de `GESTION-WEB.md`; no promover cuentas directamente en la base ni guardar credenciales en Git.
 2. Probar **Administración → Sucursales**: altas, edición y activación/desactivación ya implementadas. Una sucursal nueva no ofrece turnos hasta configurar mesas y horarios.
-3. Probar **Mesas** y **Horarios**: alta, capacidad, estados, servicios semanales, excepciones y consulta efectiva ya implementados. Continuar con bloqueos temporales por mesa. Mantener zona del restaurante, cruce de medianoche y validaciones de la API.
+3. Probar **Mesas → Bloqueos temporales** y las estrellas de niveles en Mis puntos/Administración. La configuración operativa ya está implementada y conserva las validaciones de la API. Consultar [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md) para instalación y límites.
 4. Ampliar los recorridos de navegador para esa configuración, incluyendo permisos, conflictos y pantallas pequeñas. Actualizar README y este plan con cada entrega.
-5. Resolver sesiones/operaciones entre pestañas y continuar con los controles de producción de la etapa 7. No marcar la etapa 6 completa antes de cubrir los formularios pendientes y su verificación.
+5. Resolver sesiones/operaciones entre pestañas y continuar con los controles de producción de la etapa 7. No marcar la etapa 6 completa antes de revisar almacenamiento y coordinación de sesiones.
 
 Verificado al 4 de noviembre: compilación del monorepo, tipos, 17 pruebas de API y 8 de web, integración PostgreSQL ampliada con imágenes y seis recorridos Playwright (cliente, gestión y sucursales, escritorio y móvil). Incluyen fotos propias del inicio, recarga, reemplazo/borrado, conflictos de desactivación, alta incierta y ajuste con respuesta perdida sin duplicar movimientos. La sexta migración `20261104000100_branch_images` se aplicó localmente. Sin dependencias ni servicios externos adicionales. Las fotos se incluyen en los respaldos de la base; revisar volumen/optimización al preparar producción.
 
 Verificado al 6 de noviembre: compilación web, tipos, las 25 pruebas de API/web y diez recorridos de navegador aprobados (cliente, gestión, sucursales, mesas y horarios, escritorio/móvil). Mesas incluye disponibilidad, conflictos CONFIRMED/ATTENDED, permisos, paginación y conservación de cambios concurrentes. Horarios incluye medianoche, intervalos, cierres/reapertura, solapamientos, borrado de excepciones que restauraría un conflicto, reservas protegidas y alta con respuesta incierta. Solo se modificó la interfaz y su documentación, sin backend ni migraciones nuevas. Detalles en [MESAS-WEB.md](MESAS-WEB.md) y [HORARIOS-WEB.md](HORARIOS-WEB.md).
+
+Ampliación posterior del 6 de noviembre: bloqueos temporales y estrellas de niveles, con compilación web, tipos, **28 pruebas (17 API + 11 web) y doce recorridos de navegador aprobados**. Los bloqueos se prueban con navegador en Pacific/Auckland para verificar la conversión del restaurante, además de cruces, reservas protegidas, retirada, paginación y respuesta perdida. Los recorridos de cliente/administración verifican nombres e iconos de niveles. Se declaran en la web date-fns/date-fns-tz, versiones ya utilizadas por el monorepo; actualizar dependencias con el lockfile. Sin cambios de backend ni migraciones.
 
 También se corrigió la restauración demorada de perfil al cambiar de cuenta: una respuesta de la cuenta anterior no sobrescribe la nueva. El recorrido de gestión reproduce ese caso con una respuesta retenida; esto no resuelve todavía la coordinación de sesiones entre pestañas.
 

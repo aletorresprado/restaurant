@@ -7,6 +7,7 @@ import { api, post, ApiError, errorMessage, type Branch, type Page } from '@/lib
 import { useStore } from '@/lib/store';
 import { Button, Container, Field, Notice, inputClass } from '@/components/kit';
 import { Pager, QueryError, useManagedBranches } from './common';
+import { TableBlocks } from './TableBlocks';
 
 type RestaurantTable = {
   id: string;
@@ -112,6 +113,7 @@ function TablesForBranch({
   const { user } = useStore();
   const [page, setPage] = useState(1),
     [editing, setEditing] = useState<RestaurantTable | 'new' | null>(null),
+    [blocking, setBlocking] = useState<RestaurantTable | null>(null),
     [success, setSuccess] = useState('');
   const tables = useQuery({
     queryKey: ['management', user?.id, 'tables', branch.id, page],
@@ -125,7 +127,7 @@ function TablesForBranch({
   });
   const edit = (table: RestaurantTable | 'new' | null) => {
     setEditing(table);
-    onEditingChange(table !== null);
+    onEditingChange(table !== null || blocking !== null);
   };
   return (
     <>
@@ -143,14 +145,14 @@ function TablesForBranch({
           <Button
             variant="secondary"
             size="sm"
-            disabled={editing !== null}
+            disabled={editing !== null || blocking !== null}
             onClick={() => void tables.refetch()}
           >
             Actualizar mesas
           </Button>
           <Button
             size="sm"
-            disabled={editing !== null || !!tables.error || tables.isPending}
+            disabled={editing !== null || blocking !== null || !!tables.error || tables.isPending}
             onClick={() => {
               setSuccess('');
               edit('new');
@@ -178,6 +180,18 @@ function TablesForBranch({
           onSaved={(table) => {
             edit(null);
             setSuccess(`Mesa ${table.tableNumber} guardada.`);
+          }}
+        />
+      )}
+      {blocking && (
+        <TableBlocks
+          key={blocking.id}
+          branchId={branch.id}
+          tableId={blocking.id}
+          tableNumber={blocking.tableNumber}
+          onClose={() => {
+            setBlocking(null);
+            onEditingChange(editing !== null);
           }}
         />
       )}
@@ -210,7 +224,7 @@ function TablesForBranch({
                   variant="secondary"
                   size="sm"
                   className="mt-4"
-                  disabled={editing !== null}
+                  disabled={editing !== null || blocking !== null}
                   onClick={() => {
                     setSuccess('');
                     edit(table);
@@ -219,12 +233,26 @@ function TablesForBranch({
                 >
                   Editar mesa
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-3 ml-2"
+                  disabled={editing !== null || blocking !== null}
+                  aria-label={`Ver bloqueos de mesa ${table.tableNumber}`}
+                  onClick={() => {
+                    setBlocking(table);
+                    setSuccess('');
+                    onEditingChange(true);
+                  }}
+                >
+                  Bloqueos temporales
+                </Button>
               </li>
             ))}
           </ul>
         )}
       </div>
-      {tables.data && editing === null && (
+      {tables.data && editing === null && blocking === null && (
         <Pager page={page} totalPages={tables.data.meta.totalPages} onChange={setPage} />
       )}
       <p className="mt-5 text-sm text-muted-foreground">
@@ -236,7 +264,7 @@ function TablesForBranch({
         <Link to="/horarios" search={{ sucursal: branch.id }} className="underline">
           Horarios
         </Link>
-        . Los bloqueos temporales por fecha siguen pendientes.
+        . Usá Bloqueos temporales en cada mesa para administrar intervalos por fecha.
       </p>
     </>
   );

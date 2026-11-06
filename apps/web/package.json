@@ -19,6 +19,8 @@
     "@tanstack/react-router": "1.170.41",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "4.4.0",
+    "date-fns-tz": "3.2.0",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -28,6 +30,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/router-plugin": "1.168.42",
     "@types/react": "^19.2.0",
@@ -35,7 +38,6 @@
     "@vitejs/plugin-react": "^5.2.0",
     "typescript": "^5.7.3",
     "vite": "^7.3.1",
-    "vitest": "^4.1.10",
-    "@playwright/test": "^1.56.1"
+    "vitest": "^4.1.10"
   }
 }

@@ -14,6 +14,8 @@ Desde el 6 de noviembre, STAFF también ve **Mesas**, limitado a sus sucursales 
 
 También está disponible **Horarios**, con servicio semanal, excepciones por fecha y consulta efectiva, para ADMIN y STAFF autorizado. ADMIN tiene el enlace **Gestionar horarios** en cada sucursal. La interfaz contempla servicios nocturnos, cierres, eliminación y conflictos por reservas; ver [HORARIOS-WEB.md](HORARIOS-WEB.md).
 
+En cada mesa se abre **Bloqueos temporales** para consultar intervalos, crear con revisión/confirmación y retirar. Se usan fechas y horas del restaurante aunque el navegador esté en otra zona. Retirar un intervalo no cambia el estado general de la mesa. Ver [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md). Los niveles de puntos se muestran ahora con estrella de color y nombre, con una leyenda de los cinco niveles en Mis puntos.
+
 El login dirige al área correspondiente. Recargar conserva la sesión de la pestaña. Las pantallas muestran acceso denegado a roles incompatibles, y la API verifica el rol actual y la asignación en cada operación; ocultar enlaces no reemplaza esa autorización.
 
 Si todavía no hay un administrador, crearlo explícitamente desde una segunda terminal en la raíz del proyecto:
@@ -62,9 +64,11 @@ Los teléfonos y coordenadas existentes pueden reemplazarse, pero la API actual 
 
 ## Alcance pendiente
 
-Esta entrega cubre sucursales con imágenes, mesas, horarios, excepciones, agenda, resultados, cancelaciones, usuarios, asignaciones y puntos. Todavía no hay formularios web para bloqueos temporales: sus endpoints siguen disponibles en Swagger. Tampoco hay búsqueda de usuarios en el servidor, creación pública de administradores, corrección de resultados terminales ni automatización de ausencias.
+Esta entrega cubre sucursales con imágenes, mesas, horarios, excepciones, bloqueos temporales, agenda, resultados, cancelaciones, usuarios, asignaciones y puntos. Queda la revisión de sesiones/almacenamiento y coordinación entre pestañas antes de producción. Tampoco hay búsqueda de usuarios en el servidor, creación pública de administradores, corrección de resultados terminales ni automatización de ausencias.
 
 ## Verificación
+
+Bloqueos y estrellas de niveles: compilación web, tipos, 28 pruebas automatizadas y doce recorridos de navegador aprobados en total. La prueba de bloqueos usa una zona de navegador distinta a la del restaurante y verifica el UTC guardado. La de cliente abre la leyenda de los cinco niveles y comprueba nombres, iconos y colores diferenciados; la de administración muestra el nivel resultante de puntos reales.
 
 Horarios y excepciones también quedaron verificados el 6 de noviembre: compilación web, tipos, 25 pruebas existentes y diez recorridos de navegador aprobados en total, incluidos servicios nocturnos, cierres, reapertura, eliminación, solapamientos y reservas protegidas. La API y las migraciones permanecen iguales; ver [HORARIOS-WEB.md](HORARIOS-WEB.md).
 

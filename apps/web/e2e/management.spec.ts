@@ -152,7 +152,7 @@ test('staff operates assigned agenda and admin audits points with safe retry', a
     await page.unroute('**/api/v1/auth/me');
     await expect(page.getByRole('heading', { name: 'Administración', exact: true })).toBeVisible();
     await selectUser(page, customer.email);
-    await expect(page.getByText('0 puntos · Nivel WHITE', { exact: true })).toBeVisible();
+    await expect(page.getByText('0 puntos · Nivel White', { exact: true })).toBeVisible();
     await page.getByLabel('Puntos del ajuste').fill('5');
     await page.getByLabel('Motivo del ajuste').fill('Ajuste auditado desde navegador');
     await page.getByRole('button', { name: 'Revisar ajuste', exact: true }).click();
@@ -173,7 +173,7 @@ test('staff operates assigned agenda and admin audits points with safe retry', a
     await expect(
       page.getByText('Ajuste registrado: +5 puntos. Saldo resultante: 5.', { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('5 puntos · Nivel BRONZE', { exact: true })).toBeVisible();
+    await expect(page.getByText('5 puntos · Nivel Bronze', { exact: true })).toBeVisible();
     expect(
       await db.loyaltyMovement.count({ where: { userId: customer.id, kind: 'ADJUSTMENT' } }),
     ).toBe(1);

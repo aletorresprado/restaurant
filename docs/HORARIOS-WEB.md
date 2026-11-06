@@ -52,7 +52,7 @@ Los PATCH envían solo campos modificados. No hay control de versiones: si varia
 
 Con prefijo `/api/v1`, STAFF asignado/ADMIN usan GET/POST `/staff/branches/:branchId/schedules` y `/schedule-exceptions`, y PATCH/DELETE con el identificador del registro. Las excepciones aceptan `page` y `limit`. La vista efectiva usa GET público `/branches/:branchId/hours?date=YYYY-MM-DD`. Ver [OPERACION.md](OPERACION.md) para el contrato completo.
 
-La siguiente parte pendiente de la configuración operativa es **bloqueos temporales por mesa**. Siguen disponibles por Swagger. Después quedan revisión de sesiones y seguridad/preparación productiva; esta entrega no completa esas etapas.
+Los [bloqueos temporales por mesa](BLOQUEOS-WEB.md) también están disponibles desde Mesas, con las fechas/horas del restaurante y los controles de reservas/solapamientos. Quedan revisión de sesiones y seguridad/preparación productiva; completar los formularios no completa esas etapas.
 
 ## Verificación
 

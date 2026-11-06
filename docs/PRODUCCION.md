@@ -4,7 +4,7 @@ Actualizado: 6 de noviembre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay seis migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes e imágenes de sucursales. El frontend agrega 8 pruebas de cliente y diez recorridos de navegador aprobados contra la base real: cliente, gestión, sucursales, mesas y horarios en escritorio y móvil, incluidos servicios nocturnos, excepciones, solapamientos, reservas protegidas y respuestas de red perdidas.
+Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay seis migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes e imágenes de sucursales. El frontend agrega 11 pruebas y doce recorridos de navegador aprobados contra la base real: cliente, gestión, sucursales, mesas, horarios y bloqueos en escritorio/móvil. Incluyen zona del restaurante distinta de la del navegador, reservas protegidas, respuestas perdidas y estrellas de niveles. La etapa 6 sigue abierta por sesiones/almacenamiento y coordinación entre pestañas.
 
 La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones y puntos; siguen pendientes los formularios de configuración operativa, infraestructura e integración continua.
 
@@ -34,7 +34,7 @@ La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplic
 - [x] Formularios web de sucursales para ADMIN, con validación, confirmación de desactivación y conflictos por reservas vigentes.
 - [x] Formularios web de mesas para STAFF asignado y ADMIN, con conflictos por reservas y estados persistentes.
 - [x] Horarios semanales, excepciones por fecha y consulta del servicio efectivo desde la web, con conflictos y confirmaciones.
-- [ ] Formularios web de bloqueos temporales por mesa según rol.
+- [x] Bloqueos temporales por mesa desde la web, con zona del restaurante, revisión/confirmación, retirada y conflictos.
 - [ ] Resolver resultados inciertos al reservar: hoy no existe clave de idempotencia y repetir el POST puede crear otra reserva si queda otra mesa. Definir idempotencia en la API o un mecanismo de reconciliación antes de habilitar reintentos en la interfaz.
 - [x] Mostrar fechas en la zona del restaurante y explicar los servicios que cruzan medianoche.
 - [ ] Verificar navegación con teclado, pantallas pequeñas, carga, errores, sesión vencida y turnos agotados durante la confirmación.

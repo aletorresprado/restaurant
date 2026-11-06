@@ -45,7 +45,7 @@ El número es único dentro de la sucursal; el mismo número puede existir en ot
 
 No hay eliminación permanente, renumeración ni traslado entre sucursales; usar Fuera de servicio cuando corresponda. Tampoco hay plano visual, combinación de mesas, operaciones masivas o auditoría nueva de cambios de capacidad/estado. La API no ofrece control de versiones de edición: si dos personas cambian el mismo campo, prevalece la última operación aceptada.
 
-La gestión de [horarios semanales y excepciones](HORARIOS-WEB.md) ya está disponible, con enlace desde Mesas hacia la misma sucursal. Los bloqueos temporales siguen pendientes en la web; sus endpoints se pueden usar desde Swagger. Ver [OPERACION.md](OPERACION.md). No confundir Bloqueada con un bloqueo por intervalo de fechas.
+La gestión de [horarios semanales y excepciones](HORARIOS-WEB.md) está disponible, con enlace desde Mesas hacia la misma sucursal. Desde cada mesa se abren los [bloqueos temporales](BLOQUEOS-WEB.md), con consulta, alta y retirada. Ver [OPERACION.md](OPERACION.md). No confundir el estado Bloqueada con un bloqueo por intervalo de fechas: retirar el intervalo no cambia el estado.
 
 ## Validación
 

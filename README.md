@@ -4,7 +4,7 @@ Monorepo pnpm con API NestJS, validación Zod y tipos compartidos.
 
 ## Estado
 
-Estado al 6 de noviembre de 2026: API funcional en desarrollo local, con las etapas 1 a 5 completadas, e interfaz web de clientes, agenda y administración, incluida gestión de sucursales, imágenes, mesas, horarios y excepciones. El proyecto aún no está preparado para operar en producción.
+Estado al 6 de noviembre de 2026: API funcional en desarrollo local, con las etapas 1 a 5 completadas, e interfaz web de clientes, agenda y administración, incluida gestión de sucursales, imágenes, mesas, horarios, excepciones y bloqueos temporales. La etapa 6 sigue abierta por revisión de sesiones y almacenamiento. El proyecto aún no está preparado para operar en producción.
 
 - Identidad: registro, login, perfil, renovación y cierre de sesión con persistencia PostgreSQL/Prisma.
 - Organización: permisos por rol, sucursales y asignaciones de personal, con permisos consultados en cada petición.
@@ -160,15 +160,19 @@ La fidelización agrega la quinta migración, `20261103000100_loyalty`. Para act
 
 ### Agenda y administración web
 
-Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 6 de noviembre** en [docs/PLAN.md](docs/PLAN.md). Mesas, horarios y excepciones ya tienen gestión web; siguen bloqueos temporales por mesa, revisión de sesiones y preparación productiva.
+Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 6 de noviembre** en [docs/PLAN.md](docs/PLAN.md). La configuración operativa principal ya tiene gestión web; siguen revisión de sesiones/almacenamiento, coordinación entre pestañas y preparación productiva.
 
 Las cuentas STAFF ingresan a **Agenda** (`/personal`): sucursal asignada, fecha de servicio, reservas, asistencia, ausencia, cancelación e historial. Las cuentas ADMIN también acceden a **Administración** (`/administracion`): **Usuarios y puntos** para roles, asignaciones y ajustes auditados; **Sucursales** para crear, editar, activar y desactivar, con validación de datos y confirmación de desactivación. Los cambios actualizan el catálogo y las sucursales disponibles para agenda/asignaciones. La API rechaza desactivar sucursales con reservas vigentes. Una sucursal nueva necesita mesas y horarios para ofrecer turnos; esa configuración sigue disponible desde Swagger.
 
-Si solo hay cuentas de cliente, crear un administrador separado con `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-admin.ps1` desde la raíz. Pide un correo nuevo y una contraseña oculta; no cambia cuentas existentes ni guarda credenciales en archivos. Luego salir de la app e ingresar con esa cuenta. Ver [GESTION-WEB.md](docs/GESTION-WEB.md) para uso, pruebas y límites. Los formularios web de bloqueos temporales siguen pendientes.
+Si solo hay cuentas de cliente, crear un administrador separado con `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-admin.ps1` desde la raíz. Pide un correo nuevo y una contraseña oculta; no cambia cuentas existentes ni guarda credenciales en archivos. Luego salir de la app e ingresar con esa cuenta. Ver [GESTION-WEB.md](docs/GESTION-WEB.md) para uso, pruebas y límites.
 
 **Mesas** (`/mesas`) permite a ADMIN y STAFF autorizado elegir sucursal, listar mesas con paginación, crear con capacidad 1–50 y editar capacidad/estado. ADMIN también llega desde **Administración → Sucursales → Gestionar mesas** y puede configurar sucursales inactivas. El número queda fijo y es único dentro de cada sucursal. Los cambios a Bloqueada o Fuera de servicio requieren confirmación, y la API impide afectar reservas vigentes. No hay borrado permanente. Ver [MESAS-WEB.md](docs/MESAS-WEB.md) para el recorrido, pruebas y límites. Esta entrega no requiere nuevas dependencias ni migraciones.
 
 **Horarios** (`/horarios`) permite gestionar el servicio semanal y las excepciones por fecha: alta, edición, activación/desactivación y eliminación con confirmación cuando corresponde. Incluye consulta del servicio efectivo por fecha, horarios nocturnos y errores de solapamiento o reservas vigentes. ADMIN también llega desde cada sucursal con **Gestionar horarios**; STAFF queda limitado a sus sucursales activas asignadas. Las horas se interpretan en la zona del restaurante, no la del navegador. Ver [HORARIOS-WEB.md](docs/HORARIOS-WEB.md). Usa la API existente, sin migraciones ni dependencias nuevas.
+
+Desde **Mesas → Bloqueos temporales** se consultan, crean y retiran intervalos con inicio, fin y motivo, en la zona del restaurante. Se revisa y confirma antes de guardar; la API rechaza cruces con reservas u otros bloqueos. Retirarlos no reactiva una mesa Bloqueada o Fuera de servicio. Ver [BLOQUEOS-WEB.md](docs/BLOQUEOS-WEB.md). La web declara ahora las bibliotecas de fechas `date-fns`/`date-fns-tz` ya utilizadas por la API: al actualizar otro equipo ejecutar `pnpm.cmd install --frozen-lockfile` y compilar. No hay migraciones nuevas.
+
+Los niveles de fidelización se muestran con **estrella de color y nombre**: White, Bronze, Silver, Gold y Platinum, tanto en Mis puntos como en Administración. White usa relleno blanco con contorno para distinguirse sobre el fondo claro. Mis puntos incluye la lista desplegable **Niveles de fidelización** con los umbrales de la configuración compartida; no cambian saldo, niveles ni recompensas.
 
 Cada sucursal puede tener una **imagen propia para el inicio**. En Administración → Sucursales, elegir un archivo JPG, PNG o WebP de hasta 2 MB en su tarjeta y pulsar **Guardar imagen**. Hay vista previa, reemplazo y borrado con confirmación; sin foto se usa la imagen general. Las imágenes se guardan en PostgreSQL, no en Git ni en el navegador, y no requieren otra cuenta o servicio. La visualización usa formato 4:3 con recorte centrado; no se modifica ni comprime el archivo original.
 

@@ -11,6 +11,12 @@ Implementado el 3 de noviembre de 2026. No requiere cuentas ni servicios externo
 
 La asistencia/ausencia, el evento, el movimiento y el saldo se escriben en una sola transacción. El bloqueo del usuario coordina operaciones de distintas sucursales, encuestas y ajustes. Una clave única impide duplicar movimientos. Incluso una penalización aplicada en cero queda registrada con `requestedPoints: -3`, `points: 0` y `balanceAfter: 0`.
 
+## Presentación de niveles en la web
+
+Desde el 6 de noviembre de 2026, Mis puntos y Administración muestran una estrella rellena junto al nombre: White (blanca con contorno gris), Bronze (bronce), Silver (plateada), Gold (dorada) y Platinum (platino claro con matiz azulado). El texto permanece visible y el icono es decorativo para lectores de pantalla: el nivel no se comunica solo por color.
+
+Mis puntos tiene un desplegable **Niveles de fidelización** que muestra los cinco niveles y sus umbrales, leídos de `LOYALTY_TIER_THRESHOLDS`. La presentación es compartida mediante `LoyaltyTierBadge`; los códigos de la API siguen siendo WHITE/BRONZE/SILVER/GOLD/PLATINUM. No se modifican los puntos ni la función que calcula el nivel. El recorrido de cliente comprueba nombres, iconos y colores diferenciados; el de administración comprueba el nivel resultante de un ajuste.
+
 ## Activación e historial anterior
 
 La migración `20261103000100_loyalty` inicia todos los saldos en cero y no recalcula eventos anteriores. Repetir una asistencia/ausencia ya registrada devuelve el resultado existente sin generar puntos retroactivos. Se puede responder una encuesta de una reserva histórica propia con asistencia y ya finalizada, si todavía no tiene encuesta.

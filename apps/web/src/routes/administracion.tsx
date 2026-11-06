@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store';
 import { formatDateTime } from '@/lib/format';
 import { Button, Container, Field, Notice, inputClass } from '@/components/kit';
 import { BranchManagement } from '@/components/management/BranchManagement';
+import { LoyaltyTierBadge } from '@/components/LoyaltyTierBadge';
 import {
   ManagementAccess,
   Pager,
@@ -399,7 +400,8 @@ function UserLoyalty({ userId }: { userId: string }) {
         <QueryError error={summary.error} retry={summary.refetch} />
       ) : (
         <p className="mt-3 text-lg">
-          {summary.data?.balance} puntos · Nivel {summary.data?.tier}
+          {summary.data?.balance} puntos · Nivel{' '}
+          {summary.data && <LoyaltyTierBadge tier={summary.data.tier} />}
         </p>
       )}
       <div className="mt-5 space-y-3">
