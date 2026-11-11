@@ -19,13 +19,16 @@ export class AuthService {
     private readonly config: ConfigService) {}
 
   async register(input: RegisterDto) {
+    return this.issue(await this.createUser(input));
+  }
+  private async createUser(input: RegisterDto) {
     const passwordHash = await bcrypt.hash(input.password, 12);
     try {
       const user = await this.db.user.create({ data: {
         email: input.email.trim().toLowerCase(), firstName: input.firstName.trim(),
         lastName: input.lastName.trim(), phone: input.phone, passwordHash,
       } });
-      return this.issue(user);
+      return user;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('El correo ya está registrado');
@@ -35,11 +38,27 @@ export class AuthService {
   }
 
   async login(input: LoginDto) {
+    return this.issue(await this.authenticate(input));
+  }
+  private async authenticate(input: LoginDto) {
     const user = await this.db.user.findUnique({ where: { email: input.email.trim().toLowerCase() } });
     // Always check a password hash to avoid a fast path for unknown accounts.
     const valid = await bcrypt.compare(input.password, user?.passwordHash ?? this.dummyHash);
     if (!user || !valid || !user.isActive) throw new UnauthorizedException('Credenciales inválidas');
-    return this.issue(user);
+    return user;
+  }
+
+  async browserLogin(tabId: string, input: LoginDto | RegisterDto, register = false) {
+    const user = register ? await this.createUser(input as RegisterDto) : await this.authenticate(input);
+    const secret = randomBytes(48).toString('base64url');
+    const expiresAt = new Date(Date.now() + Number(this.config.get('WEB_SESSION_HOURS') ?? 8) * 3600000);
+    await this.db.session.create({ data: { userId: user.id, browserTabId: tabId,
+      refreshTokenHash: digest(secret), expiresAt } });
+    return { user: publicUser(user), secret };
+  }
+  async browserLogout(tabId: string, secret: string) {
+    await this.db.session.deleteMany({ where: { browserTabId: tabId, refreshTokenHash: digest(secret) } });
+    return { success: true };
   }
 
   private readonly dummyHash = bcrypt.hashSync(randomBytes(32).toString('hex'), 12);
@@ -47,7 +66,7 @@ export class AuthService {
   async refresh(token: string) {
     return this.db.$transaction(async tx => {
       const session = await tx.session.findUnique({ where: { refreshTokenHash: digest(token) }, include: { user: true } });
-      if (!session || session.expiresAt <= new Date() || !session.user.isActive) {
+      if (!session || session.browserTabId || session.expiresAt <= new Date() || !session.user.isActive) {
         throw new UnauthorizedException('Sesión inválida o vencida');
       }
       // Atomic deletion makes simultaneous refreshes single use.

@@ -14,9 +14,14 @@ async function login(page: Page, email: string, navigate = true) {
   if (navigate) await page.goto('/ingresar');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Contraseña', { exact: true }).fill('Password123');
-  const response = page.waitForResponse((response) => response.url().endsWith('/auth/login'));
+  const response = page.waitForResponse((response) => response.url().endsWith('/auth/web/login'));
   await page.getByRole('button', { name: 'Ingresar', exact: true }).last().click();
-  return (await (await response).json()).accessToken as string;
+  await response;
+  const legacy = await page.request.post('http://127.0.0.1:3000/api/v1/auth/login', {
+    data: { email, password: 'Password123' },
+  });
+  expect(legacy.ok()).toBe(true);
+  return (await legacy.json()).accessToken as string;
 }
 async function logout(page: Page, name: string) {
   await page.getByRole('button', { name: `Salir (${name})`, exact: true }).click();

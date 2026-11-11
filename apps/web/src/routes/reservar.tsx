@@ -85,6 +85,7 @@ function Reserve() {
   const proceed = () => {
     if (!selected || !branchId) return;
     setPending({
+      operationId: crypto.randomUUID(),
       branchId,
       serviceDate: date,
       partySize,

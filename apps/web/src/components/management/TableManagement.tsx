@@ -1,9 +1,10 @@
+import { managedPost } from '@/lib/management-intent';
 import { useState, type FormEvent } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreateRestaurantTableSchema, UpdateRestaurantTableSchema } from '@repo/validation';
 import { TableStatus } from '@repo/shared-types';
-import { api, post, ApiError, errorMessage, type Branch, type Page } from '@/lib/api';
+import { api, ApiError, errorMessage, type Branch, type Page } from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { Button, Container, Field, Notice, inputClass } from '@/components/kit';
 import { Pager, QueryError, useManagedBranches } from './common';
@@ -326,7 +327,7 @@ function TableForm({
             { method: 'PATCH', body: JSON.stringify(parsed.data) },
             true,
           )
-        : await post<RestaurantTable>(root, parsed.data, true);
+        : await managedPost<RestaurantTable>(root, parsed.data);
       await client.invalidateQueries({ queryKey: ['management'] });
       await client.invalidateQueries({ queryKey: ['availability'] });
       onSaved(saved);

@@ -6,6 +6,7 @@ export const AvailabilityQuerySchema = z.object({
   partySize: z.coerce.number().int().min(1).max(50),
 }).strict();
 export const CreateReservationSchema = z.object({
+  operationId: z.string().uuid().optional(),
   branchId: z.string().uuid(),
   serviceDate: z.string().date(),
   startAt: z.string().datetime({ offset: true }),

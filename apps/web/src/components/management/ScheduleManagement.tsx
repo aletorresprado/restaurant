@@ -1,3 +1,4 @@
+import { managedPost } from '@/lib/management-intent';
 import { useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -8,7 +9,7 @@ import {
   CreateBranchScheduleExceptionSchema,
   UpdateBranchScheduleExceptionSchema,
 } from '@repo/validation';
-import { api, post, ApiError, errorMessage, type Branch, type Page } from '@/lib/api';
+import { api, ApiError, errorMessage, type Branch, type Page } from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { restaurantDate, formatDateTime, dateLabel } from '@/lib/format';
 import { Button, Container, Field, Notice, inputClass } from '@/components/kit';
@@ -441,7 +442,7 @@ function WeeklyForm({
     try {
       await (item
         ? api(`${root}/schedules/${item.id}`, { method: 'PATCH', body: JSON.stringify(body) }, true)
-        : post(`${root}/schedules`, body, true));
+        : managedPost(`${root}/schedules`, body));
       await onSaved();
     } catch (err) {
       setError(errorMessage(err));
@@ -619,7 +620,7 @@ function ExceptionForm({
             { method: 'PATCH', body: JSON.stringify(body) },
             true,
           )
-        : post(`${root}/schedule-exceptions`, body, true));
+        : managedPost(`${root}/schedule-exceptions`, body));
       await onSaved();
     } catch (err) {
       setError(errorMessage(err));

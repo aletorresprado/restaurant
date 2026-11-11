@@ -1,8 +1,9 @@
+import { managedPost } from '@/lib/management-intent';
 import { useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BUSINESS_CONFIG } from '@repo/config';
 import { CreateTableBlockSchema } from '@repo/validation';
-import { api, post, ApiError, errorMessage, type Page } from '@/lib/api';
+import { api, ApiError, errorMessage, type Page } from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { restaurantDate, formatDateTime } from '@/lib/format';
 import { restaurantInstant } from '@/lib/restaurant-time';
@@ -235,7 +236,7 @@ function BlockForm({
     setBusy(true);
     onBusy(true);
     try {
-      await post(root, confirmation, true);
+      await managedPost(root, confirmation);
       await onSaved();
     } catch (err) {
       setError(errorMessage(err));

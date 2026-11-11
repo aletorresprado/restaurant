@@ -5,6 +5,7 @@ import { CreateBranchDto, UpdateBranchDto } from '@repo/validation';
 import { PrismaService } from '../database/prisma.service';
 import { BranchQuery } from './branches.schemas';
 import { occupyingStatuses } from '../reservations/rules';
+import { writeOperation, WriteIdentity } from '../common/write-operation';
 
 const staffFields = { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true } as const;
 // Never serialize image bytes in catalog, operational or administrative lists.
@@ -13,6 +14,11 @@ const branchFields = { id: true, name: true, address: true, phone: true, latitud
 @Injectable()
 export class BranchesService {
   constructor(private readonly db: PrismaService) {}
+  async user(id: string) {
+    const user = await this.db.user.findUnique({ where: { id }, select: staffFields });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    return user;
+  }
 
   async list(query: BranchQuery, scope: 'public' | 'admin' | 'staff', userId?: string, role?: Role) {
     const where: Prisma.BranchWhereInput = scope === 'admin' ? {} : {
@@ -40,7 +46,11 @@ export class BranchesService {
     return branch;
   }
 
-  create(data: CreateBranchDto) { return this.db.branch.create({ data, select: branchFields }); }
+  create(data: CreateBranchDto, operation?: WriteIdentity) {
+    return writeOperation(this.db, operation, 'BRANCH', 'branches', data,
+      tx => tx.branch.create({ data, select: branchFields }),
+      (tx, id) => tx.branch.findUnique({ where: { id }, select: branchFields }));
+  }
 
   async update(id: string, data: UpdateBranchDto) {
     const existing = await this.find(id);

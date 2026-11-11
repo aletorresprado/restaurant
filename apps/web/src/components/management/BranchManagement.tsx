@@ -1,8 +1,9 @@
+import { managedPost } from '@/lib/management-intent';
 import { useState, type FormEvent } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { CreateBranchSchema, UpdateBranchSchema } from '@repo/validation';
-import { api, post, ApiError, errorMessage, type Branch } from '@/lib/api';
+import { api, ApiError, errorMessage, type Branch } from '@/lib/api';
 import { Button, Field, Notice, inputClass, buttonVariants } from '@/components/kit';
 import { QueryError, useManagedBranches } from './common';
 import { BranchPhoto } from './BranchPhoto';
@@ -193,7 +194,7 @@ function BranchForm({
             { method: 'PATCH', body: JSON.stringify(parsed.data) },
             true,
           )
-        : await post<Branch>('/admin/branches', parsed.data, true);
+        : await managedPost<Branch>('/admin/branches', parsed.data);
       await client.invalidateQueries({ queryKey: ['management'] });
       await client.invalidateQueries({ queryKey: ['branches'] });
       onSaved(result);

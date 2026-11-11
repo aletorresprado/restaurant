@@ -1,4 +1,4 @@
-// A copied sessionStorage must not create a second owner of a single-use refresh token.
+// A copied storage hint must not create a second owner of a browser cookie session.
 // The browser releases the lock when the document is destroyed (including reload).
 export async function claimSession(ownerId: string): Promise<(() => void) | null | undefined> {
   if (typeof navigator === 'undefined' || !navigator.locks) return undefined;

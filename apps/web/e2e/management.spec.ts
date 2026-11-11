@@ -143,7 +143,7 @@ test('staff operates assigned agenda and admin audits points with safe retry', a
     await page.getByRole('link', { name: 'Ingresar', exact: true }).first().click();
     await page.getByLabel('Email', { exact: true }).fill(admin.email);
     await page.getByLabel('Contraseña', { exact: true }).fill('Password123');
-    const newLogin = page.waitForResponse((response) => response.url().endsWith('/auth/login'));
+    const newLogin = page.waitForResponse((response) => response.url().endsWith('/auth/web/login'));
     await page.getByRole('button', { name: 'Ingresar', exact: true }).last().click();
     await newLogin;
     const oldProfile = page.waitForResponse((response) => response.url().endsWith('/auth/me'));

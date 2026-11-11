@@ -128,6 +128,9 @@ async function main() {
     assert.equal((await api('GET', `staff/branches/${otherBranch.body.id}`, undefined, customerToken)).status, 403);
     await require('./operations.integration.cjs')({ api, db, branchId, otherBranchId: otherBranch.body.id, adminToken, staffToken: customerToken });
     await require('./reservations.integration.cjs')({ api, db, branchId, otherBranchId: otherBranch.body.id, adminToken, staffToken: customerToken });
+    await require('./reservation-operations.integration.cjs')({ api, db });
+    await require('./browser-sessions.integration.cjs')({ base, db });
+    await require('./management-operations.integration.cjs')({ base, db });
     await require('./branch-images.integration.cjs')({ api, db, base, adminToken, staffToken: customerToken });
     assert.equal((await api('PATCH', `admin/branches/${branchId}`, { name: 'Forbidden change' }, customerToken)).status, 403);
     assert.equal((await api('GET', `admin/branches/${branchId}/staff`, undefined, customerToken)).status, 403);

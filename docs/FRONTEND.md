@@ -20,9 +20,9 @@ Actualización del 4 de noviembre de 2026: formularios de sucursales y elección
 - Mis reservas paginado, incluyendo anteriores y canceladas.
 - Desde el 3 de noviembre de 2026: saldo, nivel e historial de puntos paginado en Mis reservas; encuesta de calificación para visitas con asistencia y finalizadas, con recompensa única y persistencia al recargar. Ver [FIDELIZACION.md](FIDELIZACION.md).
 - Cancelación con confirmación y motivo opcional, según la regla vigente del backend.
-- Restauración de sesión, renovación coordinada por pestaña y logout con revocación del refresh token.
+- Restauración de sesión web por cookie HttpOnly y logout con revocación inmediata por pestaña; los clientes Bearer mantienen renovación de refresh.
 
-Desde el 3 de noviembre hay agenda para STAFF/ADMIN y administración de usuarios, asignaciones y puntos para ADMIN. Desde el 4 de noviembre, ADMIN dispone de formularios para sucursales y sus imágenes; desde el 6, STAFF/ADMIN también gestionan mesas, horarios, excepciones y bloqueos según sus sucursales autorizadas. Ver [MESAS-WEB.md](MESAS-WEB.md), [HORARIOS-WEB.md](HORARIOS-WEB.md) y [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md). El login dirige al área del rol; la confirmación de nuevas reservas sigue reservada a CUSTOMER. Los niveles muestran estrellas de color con nombre. Queda revisar sesiones/almacenamiento y coordinación entre pestañas antes de producción.
+Desde el 3 de noviembre hay agenda para STAFF/ADMIN y administración de usuarios, asignaciones y puntos para ADMIN. Desde el 4 de noviembre, ADMIN dispone de formularios para sucursales y sus imágenes; desde el 6, STAFF/ADMIN también gestionan mesas, horarios, excepciones y bloqueos según sus sucursales autorizadas. Ver [MESAS-WEB.md](MESAS-WEB.md), [HORARIOS-WEB.md](HORARIOS-WEB.md) y [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md). El login dirige al área del rol; la confirmación de nuevas reservas sigue reservada a CUSTOMER. Los niveles muestran estrellas de color con nombre. Sesiones HttpOnly y recuperación de reservas/altas/ajustes entre pestañas ya están implementadas; quedan los controles de publicación de la etapa 7.
 
 ## Inicio local
 
@@ -65,11 +65,11 @@ El build genera `apps/web/dist`. Para producción hace falta alojamiento estáti
 
 ## Sesiones y errores
 
-Los tokens y el usuario se guardan en `sessionStorage` de la pestaña para restaurar sesión al recargar; las reservas se consultan al servidor y no se persisten como datos de demo. El cliente comprueba `/auth/me` al restaurar. Una renovación usa una única petición compartida entre llamadas concurrentes de esa pestaña. Logout espera una renovación en curso antes de revocar su refresh y, si no puede contactar al servidor, informa el error y conserva la sesión para reintentar.
+La web recibe solo el perfil y usa una cookie HttpOnly por pestaña; no guarda tokens en almacenamiento accesible a JavaScript. sessionStorage conserva un UUID público que requiere su cookie para autenticarse. Al recargar verifica `/auth/me`. Una sesión expirada pide login. Logout revoca inmediatamente esa sesión en la base; si no puede contactar al servidor informa el error y permite reintentar. Swagger mantiene sus endpoints Bearer.
 
-La política ahora es de sesiones independientes por pestaña: Web Locks impide restaurar una copia de la sesión que ya está en uso en otra pestaña. La copia pide login sin revocar la original. Sin Web Locks, nuevos ingresos funcionan en memoria y requieren login tras recargar. También se rechazan respuestas autenticadas de un inicio de sesión anterior, sin reenvío bajo otra cuenta. Ver [SESIONES-WEB.md](SESIONES-WEB.md). Siguen pendientes cookies HttpOnly o justificación del almacenamiento actual, CSP y protección frente a XSS antes de producción. No se modificó la autenticación del backend para esta entrega.
+Web Locks impide restaurar una copia del identificador que ya está en uso. Sin esa protección, el ingreso funciona en memoria y requiere login tras recargar. Se rechazan respuestas de un inicio de sesión anterior. Ver [SESIONES-WEB.md](SESIONES-WEB.md), incluida la octava migración, origen común de web/API, CSRF, CORS y configuración HTTPS. Siguen pendientes CSP y otros controles de despliegue.
 
-No se repiten automáticamente POST de reserva por errores de red, servidor o cupo. Si la confirmación tiene resultado incierto se bloquea el reenvío en esa pantalla y se indica consultar Mis reservas. La API todavía no tiene idempotencia de creación: esa revisión evita un reintento ciego, pero no sustituye una garantía de idempotencia del servidor.
+No se repiten automáticamente POST de reserva por errores de red, servidor o cupo. Desde el 11 de noviembre, la web persiste la operación antes de enviar y permite verificar/reintentar el mismo UUID tras un corte, recarga o nuevo login. La API devuelve la reserva existente, con su estado actual, sin duplicarla. Un registro por usuario en localStorage y Web Locks coordina el intento pendiente entre pestañas; no se envían nuevas confirmaciones si no puede persistirse/coordinarse. La sesión usa cookies HttpOnly; el registro de reserva se elimina al resolver y solo persisten intentos pendientes. Ver [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md), incluida la séptima migración y los límites si se borra el almacenamiento o se usan otros dispositivos.
 
 Los errores de negocio se muestran con el mensaje de la API; errores de conexión permiten reintentar consultas. Una cancelación fallida vuelve a consultar el estado antes de mostrar éxito.
 
@@ -90,11 +90,13 @@ Las pruebas de web incluyen renovación concurrente, errores sin reenvío, logou
 
 Playwright inicia API y web locales si no están disponibles. Requiere PostgreSQL configurado y el build previo de la API. Crea exclusivamente una sucursal, mesa, excepción y usuario temporales propios; los elimina al terminar. No usar producción. Capturas y trazas quedan en `apps/web/test-results`, excluido de Git.
 
-## Pendientes de la interfaz
+## Pendientes de publicación
 
-- Agenda y gestión operativa para STAFF; administración global para ADMIN.
-- Asistencia y fidelización cuando se implemente la etapa 5.
-- Recuperación de contraseña y verificación de correo cuando existan sus endpoints.
-- Idempotencia de creación o reconciliación más completa entre pestañas/recargas, y cierre de la revisión de almacenamiento para el lanzamiento. Las sesiones independientes por pestaña ya están protegidas.
-- Fotografías y metadatos reales por sucursal, si se incorporan al contrato del producto.
-- Validación de producción de proxy, rutas directas, HTTPS, CSP y privacidad.
+La etapa 6 está completada en desarrollo local, incluida la recuperación de altas y ajustes de puntos entre pestañas; ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). Antes de publicar faltan:
+
+- Límites de intentos, CSP y configuración HTTPS/CORS del entorno real.
+- Recuperación/verificación de correo y mantenimiento de sesiones vencidas.
+- Auditoría de teclado/accesibilidad y rendimiento en un entorno de preproducción.
+- CI, migraciones aisladas, respaldos, restauración y monitoreo.
+
+No se presupone un proveedor externo ni presupuesto de despliegue; seguir [PRODUCCION.md](PRODUCCION.md).

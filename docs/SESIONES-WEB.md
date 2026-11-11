@@ -1,43 +1,56 @@
 # Sesiones de la web
 
-## Política actual
+Actualizado el 11 de noviembre de 2026. La web utiliza sesiones opacas con cookies HttpOnly, independientes por pestaña. Swagger conserva su contrato Bearer/JWT.
 
-Cada pestaña inicia su propia sesión contra la API. Puede usar la misma cuenta u otra. Cerrar sesión revoca únicamente el refresh token de esa pestaña; no cierra las demás. La pantalla de ingreso explica este alcance. Los access tokens ya emitidos siguen vigentes hasta vencer, según el contrato actual de la API.
+## Ingreso, recarga y salida
 
-Recargar restaura la sesión desde `sessionStorage` y consulta `/auth/me`. No se colocan tokens en `localStorage`, URLs ni mensajes entre pestañas. Las respuestas privadas se solicitan sin caché HTTP.
+- La web llama a `/api/v1/auth/web/login` o `/register` y recibe solo `{ user }`. No recibe access/refresh tokens en JSON ni los guarda en almacenamiento o URLs.
+- El servidor genera un secreto aleatorio de 48 bytes, guarda su hash SHA-256 en Session y lo envía exclusivamente por Set-Cookie HttpOnly. Cada sesión tiene un UUID de pestaña y vencimiento absoluto de ocho horas por defecto (`WEB_SESSION_HOURS`, entre 1 y 24).
+- sessionStorage conserva únicamente el UUID público de pestaña (`app-resto-web-tab-v1`). No identifica al usuario ni autentica sin su cookie. El perfil permanece en memoria y se verifica con `/auth/me` tras recargar.
+- Web Locks impide restaurar una copia del mismo UUID en otra pestaña. La copia pide login sin revocar la original. Sin Web Locks o almacenamiento, un nuevo ingreso puede funcionar en memoria, pero no restaurarse tras recargar. Confirmar reservas requiere la coordinación de [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md).
+- Cada petición privada envía X-Web-Session y cookies del mismo origen. Se comprueban hash, pestaña, vencimiento y cuenta activa, utilizando el rol actual de la base. Un 401 pide login; la web no rota JWTs.
+- Al ingresar con otra cuenta desde una pestaña ya propia, se revoca la sesión anterior antes de activar la nueva. Nunca se revoca una sesión por el mero UUID copiado de otra pestaña.
+- `/auth/web/logout` elimina esa sesión de la base y borra su cookie. Una petición nueva con la cookie anterior se rechaza inmediatamente. No cierra otras pestañas ni deshace operaciones ya autorizadas/enviadas.
+- Si no se puede contactar al servidor para salir, se informa el error y se conserva la sesión para reintentar. Repetir logout tras perder su respuesta es seguro.
+- Se descartan respuestas de otro inicio de sesión, incluso de la misma cuenta. Una escritura que pudo aplicarse se trata como incierta; no se reenvía automáticamente bajo otra cuenta.
 
-Al duplicar una pestaña, el navegador puede copiar `sessionStorage`. Cada sesión restaurable mantiene un bloqueo exclusivo del navegador mediante [Web Locks](https://www.w3.org/TR/web-locks/), con un identificador aleatorio sin credenciales. La copia que no obtiene ese bloqueo elimina su copia local y solicita iniciar sesión, sin renovar ni revocar la sesión original. Una pestaña que inicia sesión de nuevo obtiene tokens y un identificador propios. El navegador libera el bloqueo al destruir el documento; una recarga puede adquirirlo nuevamente.
+Las cookies no llevan Domain, Max-Age ni Expires: son cookies de sesión del navegador. En producción se llaman `__Host-resto-web-<uuid>`, con Secure, HttpOnly, SameSite=Strict y Path=/. En desarrollo se llaman `resto-web-<uuid>`, con HttpOnly, SameSite=Strict y Path=/api/v1, sin Secure para localhost. Salir explícitamente sigue siendo necesario en equipos compartidos: algunos navegadores restauran cookies y pestañas al recuperar una sesión. El servidor impone siempre su vencimiento absoluto.
 
-Las sesiones anteriores sin identificador usan una huella SHA-256 del refresh token para detectar copias; el token no se usa como nombre del bloqueo. Después de actualizar una instalación con pestañas antiguas abiertas, recargarlas para que todas ejecuten la protección nueva.
+## Origen, CSRF y despliegue
 
-Sin Web Locks, o si el navegador rechaza utilizarlos, un nuevo login funciona solo en memoria: al recargar se requiere otro ingreso. Una sesión persistida no se restaura sin poder obtener la protección. Si el almacenamiento está bloqueado, la sesión también puede funcionar en memoria. Web Locks requiere un contexto seguro (HTTPS o localhost para desarrollo); verificar compatibilidad en los navegadores del despliegue.
+Web y /api/v1 deben compartir origen público. Vite proporciona el proxy local. El cliente usa credentials=same-origin, sin cookies entre orígenes; rechaza un VITE_API_BASE_URL de otro origen al ingresar.
 
-## Renovación y cambios de cuenta
+Las operaciones web requieren UUID de pestaña y Origin dentro de WEB_ORIGINS. Se rechazan escrituras sin Origin, Origin=null, un origen distinto y Sec-Fetch-Site=cross-site. Las lecturas con Origin también se validan. Sin X-Web-Session, el guard exige Bearer: no acepta cookies ambientales al navegar a un endpoint. Cookies ambiguas con el mismo nombre se rechazan.
 
-- Las peticiones concurrentes de una sesión comparten una sola renovación. Sesiones independientes nunca comparten esa promesa.
-- Una renovación o un logout demorado de la sesión anterior no reemplaza ni elimina un nuevo login.
-- Las respuestas autenticadas se comprueban contra la identidad del inicio de sesión que las originó, incluso si se volvió a ingresar con la misma cuenta. No se reenvía una petición antigua bajo el nuevo login.
-- Si una escritura devolvió éxito después de cambiar de sesión, su resultado se trata como incierto. Puede haberse aplicado: consultar el estado con la cuenta original antes de repetirla. Esta protección no cancela una operación ya recibida por el servidor.
-- Logout espera la renovación de su propia sesión. Si no logra revocar el refresh, muestra el error y conserva la sesión para reintentar.
+CORS se restringe a WEB_ORIGINS y no permite credenciales entre orígenes. Producción exige una lista explícita de orígenes HTTPS exactos, sin rutas ni barra final, no inferidos del Host de una petición. La API emite Cache-Control=no-store, X-Content-Type-Options=nosniff y Referrer-Policy=no-referrer.
 
-## Límites y trabajo pendiente
+Referencias: [HttpOnly y cookies, RFC 6265](https://www.rfc-editor.org/rfc/rfc6265), [Fetch Metadata, W3C](https://www.w3.org/TR/fetch-metadata/) y [Web Locks, W3C](https://www.w3.org/TR/web-locks/).
 
-Esta entrega conserva el contrato de autenticación de la API y sus permisos. No agrega cookies HttpOnly, cierre global de sesiones, revocación inmediata de access tokens ni recuperación pública por correo. Los tokens de `sessionStorage` siguen accesibles a JavaScript del mismo origen: la exclusión entre pestañas no protege contra XSS. Antes de producción, resolver cookies/BFF o justificar el almacenamiento elegido con controles CSP/XSS, HTTPS y CORS.
+## Privacidad y migración
 
-La política de sesión no evita dos reservas o ajustes distintos iniciados deliberadamente en pestañas independientes. La creación de reservas aún no tiene clave de idempotencia. Los ajustes de puntos conservan su UUID para repetir la misma operación, pero dos UUID representan dos ajustes. Siguen pendientes la recuperación de operaciones inciertas tras recargas y la coordinación de intenciones entre pestañas. La etapa 6 permanece abierta por estos límites y la revisión de almacenamiento para producción.
+La octava migración, `20261111000200_browser_sessions`, agrega Session.browserTabId nullable. Conserva usuarios, contraseñas, reservas, puntos y sesiones Bearer existentes. Los endpoints antiguos de login/refresh/logout mantienen su contrato; una cookie web no puede intercambiarse por JWT en /auth/refresh.
 
-## Comprobaciones
+La web elimina el antiguo app-resto-session-v1 y solicita login de nuevo; no migra ni publica sus tokens. Los JWT emitidos antes conservan su vigencia anterior. La revocación inmediata aquí corresponde a cookies, sin cierre global de dispositivos.
 
-Pruebas unitarias del cliente: renovación concurrente, errores sin reenvío, cambios de cuenta con lecturas/escrituras pendientes, reingreso de la misma cuenta y logout demorado, además de binarios/multipart.
+Resolver una confirmación elimina su registro local, sin conservar fechas, grupo e ID de reserva. Ingreso/restauración también limpia resultados completados de esa cuenta guardados por la versión anterior. El UUID de una selección copiada permite reconocer el reenvío en la API. Al salir se limpia la selección de horario de esa pestaña.
 
-`e2e/sessions.spec.ts` usa PostgreSQL local y cuentas temporales: recarga, copia real con `window.open`, rechazo de la copia sin revocar la original, login independiente de la misma cuenta, otra cuenta, dos renovaciones simultáneas, logout aislado y navegador sin Web Locks. Se ejecuta en escritorio y móvil. No usa ni altera las cuentas personales.
+Las confirmaciones **pendientes** se conservan por cuenta para recuperarlas al volver a ingresar, incluidos fecha, sucursal y grupo, sin credenciales. No borrarlas ciegamente tras un corte. En equipos compartidos, salir explícitamente y revisar pendientes. Los ajustes administrativos guardan solo borradores/pendientes en localStorage, compartidos por administrador/cliente, y los eliminan al resolver. Se migran los pendientes antiguos de sessionStorage al seleccionar su cliente. Ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md).
 
-La suite actual reúne 33 pruebas unitarias (17 API y 16 web) y dieciséis recorridos de navegador, además de chequeo de tipos del monorepo y compilación web. La herramienta local de restablecimiento de contraseña tiene una prueba PostgreSQL separada, documentada en README; no se cuenta entre las 33 unitarias.
+HttpOnly impide leer el secreto desde JavaScript, pero un XSS activo todavía puede ejecutar acciones o leer respuestas con una sesión abierta. Siguen pendientes CSP del frontend desplegado, límites de intentos, recuperación/verificación de correo, limpieza de sesiones vencidas, cierre global y validación del despliegue real. Las pestañas cerradas sin logout pueden dejar cookies/sesiones que vencen en el servidor; su mantenimiento corresponde a la etapa 7. Esta entrega no constituye un despliegue productivo.
+
+## Instalación y pruebas
+
+Conservar el .env propio, revisar .env.example y detener la API si Windows bloquea la DLL de Prisma:
 
 ```powershell
-pnpm.cmd test
-pnpm.cmd lint
-pnpm.cmd --filter @repo/web build
-pnpm.cmd --filter @repo/web test:e2e
-git diff --check
+pnpm.cmd --filter @repo/api db:generate
+pnpm.cmd --filter @repo/api db:deploy
+pnpm.cmd build
+pnpm.cmd dev
 ```
+
+No hay dependencias ni servicios nuevos. En desarrollo WEB_ORIGINS admite http://127.0.0.1:5173 y http://localhost:5173. En producción configurar NODE_ENV=production, WEB_ORIGINS=https://dominio-del-producto y HTTPS en el proxy.
+
+La integración PostgreSQL verifica cookies/flags, ausencia de secretos en JSON, hash persistido, CSRF/origen, cookies ambiguas, pestañas, roles actuales, cuenta inactiva, expiración, revocación y compatibilidad Bearer. El navegador comprueba recarga, copia de pestaña, cuentas independientes, logout aislado, HttpOnly y ausencia de secretos en almacenamiento, además de recorridos de reservas y gestión.
+
+Validado: compilación, tipos, esquema Prisma, 42 pruebas unitarias (20 API + 22 web), integración PostgreSQL y suite completa de dieciocho recorridos de navegador; seis recorridos de gestión/sesiones repetidos tras el ajuste final de cambio de cuenta, todos aprobados.

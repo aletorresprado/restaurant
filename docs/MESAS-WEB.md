@@ -39,7 +39,7 @@ Todas requieren STAFF con asignación activa o ADMIN, con prefijo `/api/v1`:
 - `POST /staff/branches/:branchId/tables`, con `{ "tableNumber": "A-1", "capacity": 4 }`.
 - `PATCH /staff/branches/:branchId/tables/:tableId`, solo `capacity` y/o `tableStatus`.
 
-El número es único dentro de la sucursal; el mismo número puede existir en otra. La API rechaza un ID de mesa de otra sucursal, campos extra, capacidad inválida y números duplicados. Si se pierde la respuesta del alta, el formulario bloquea su reenvío y ofrece **Cerrar y revisar mesas**. No se crean mesas automáticamente ni se reintentan altas ante errores de red. Revisar el número y la página correspondiente antes de iniciar otra operación.
+El número es único dentro de la sucursal; el mismo número puede existir en otra. La API rechaza un ID de mesa de otra sucursal, campos extra, capacidad inválida y números duplicados. Si se pierde la respuesta del alta, el formulario bloquea su reenvío y ofrece **Cerrar y revisar mesas**. No se crean mesas automáticamente ni se reintentan altas ante errores de red. Antes de iniciar otra operación, recuperar el intento desde **Operaciones pendientes**. La web conserva su Idempotency-Key tras recargar y el servidor devuelve la mesa existente, aunque su capacidad/estado haya cambiado. Ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md).
 
 ## Límites y continuación
 

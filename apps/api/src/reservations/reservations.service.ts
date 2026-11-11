@@ -52,6 +52,21 @@ export class ReservationsService {
 
   async create(userId: string, data: CreateReservationDto) {
     return this.db.$transaction(async tx => {
+      if (data.operationId) {
+        // Serialize a user's operation even if a conflicting replay changes branch.
+        // This lock precedes the branch lock and never locks a User row.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId + ':' + data.operationId.toLowerCase()}, 0))`;
+        const existing = await tx.reservation.findUnique({
+          where: { userId_operationId: { userId, operationId: data.operationId } }, include: details,
+        });
+        if (existing) {
+          if (existing.branchId !== data.branchId.toLowerCase() || existing.serviceDate !== data.serviceDate ||
+              existing.partySize !== data.partySize || existing.startAt.getTime() !== new Date(data.startAt).getTime())
+            throw new ConflictException('La operación ya fue utilizada con otros datos. Conservá los datos del intento original.');
+          // Return current state, even after cancellation, service changes or start time.
+          return existing;
+        }
+      }
       // Shared with schedule edits, table edits, block creation and branch deactivation.
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${data.branchId}::uuid FOR UPDATE`;
       const context = await this.context(tx, data.branchId, data.serviceDate, data.partySize);
@@ -60,7 +75,7 @@ export class ReservationsService {
       if (!fits(startAt, endAt, context.hours.window) || !context.hours.window || !aligned(startAt, context.hours.window.startAt, context.hours.reservationIntervalMinutes)) throw new BadRequestException('El inicio debe coincidir con un turno y la reserva completa debe estar dentro del servicio');
       const table = this.freeTables(context, startAt, endAt)[0];
       if (!table) throw new ConflictException('No quedan mesas disponibles para ese turno y grupo');
-      return tx.reservation.create({ data: { userId, branchId: data.branchId, tableId: table.id, serviceDate: data.serviceDate, partySize: data.partySize, startAt, endAt,
+      return tx.reservation.create({ data: { userId, operationId: data.operationId, branchId: data.branchId, tableId: table.id, serviceDate: data.serviceDate, partySize: data.partySize, startAt, endAt,
         events: { create: { actorId: userId, type: 'RESERVATION_CREATED' } },
       }, include: details });
     }, { timeout: 15000 });

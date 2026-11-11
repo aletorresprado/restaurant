@@ -34,7 +34,9 @@ export class ReservationsController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.CUSTOMER)
+  @ApiOperation({ summary: 'Confirmar reserva; reenviar operationId con los mismos datos devuelve la reserva existente, sin duplicarla' })
   @ApiBody({ schema: { type: 'object', required: ['branchId', 'serviceDate', 'startAt', 'partySize'], additionalProperties: false, properties: {
+    operationId: { type: 'string', format: 'uuid', description: 'UUID por intento del cliente. Reutilizarlo en cada reintento. Opcional por compatibilidad; sin él no hay protección contra reenvíos.' },
     branchId: { type: 'string', format: 'uuid' }, serviceDate: { type: 'string', format: 'date', example: '2026-11-02' },
     startAt: { type: 'string', format: 'date-time', example: '2026-11-02T20:00:00-03:00' }, partySize: { type: 'integer', minimum: 1, maximum: 50 },
   } } })

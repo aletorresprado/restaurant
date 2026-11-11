@@ -15,4 +15,12 @@ describe('environment configuration', () => {
     expect(validateEnvironment(valid).PORT).toBe(3000);
     expect(() => validateEnvironment({ ...valid, PORT: 99999 })).toThrow();
   });
+  it('requires explicit HTTPS origins for production and bounds browser sessions', () => {
+    expect(() => validateEnvironment({ ...valid, NODE_ENV: 'production' })).toThrow();
+    expect(() => validateEnvironment({ ...valid, NODE_ENV: 'production', WEB_ORIGINS: 'http://example.com' })).toThrow();
+    expect(() => validateEnvironment({ ...valid, WEB_ORIGINS: 'https://example.com/path' })).toThrow();
+    expect(() => validateEnvironment({ ...valid, WEB_SESSION_HOURS: 25 })).toThrow();
+    expect(validateEnvironment({ ...valid, NODE_ENV: 'production', WEB_ORIGINS: 'https://example.com' }).WEB_ORIGINS)
+      .toEqual(['https://example.com']);
+  });
 });

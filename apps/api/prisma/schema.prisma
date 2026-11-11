@@ -31,6 +31,20 @@ model User {
   loyaltyBalance Int @default(0)
   loyaltyMovements LoyaltyMovement[] @relation("LoyaltyOwner")
   loyaltyAdjustments LoyaltyMovement[] @relation("LoyaltyActor")
+  writeOperations WriteOperation[]
+}
+
+model WriteOperation {
+  actorId String @db.Uuid
+  operationId String @db.Uuid
+  kind String @db.VarChar(30)
+  scope String @db.VarChar(100)
+  requestHash String @db.Char(64)
+  resultId String @db.Uuid
+  createdAt DateTime @default(now())
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@id([actorId, operationId])
 }
 
 model Branch {
@@ -96,6 +110,7 @@ enum ReservationEventType {
 
 model Reservation {
   id String @id @default(uuid()) @db.Uuid
+  operationId String? @db.Uuid
   userId String @db.Uuid
   branchId String @db.Uuid
   tableId String @db.Uuid
@@ -113,6 +128,7 @@ model Reservation {
 
   @@index([tableId, status, startAt, endAt])
   @@index([userId, startAt])
+  @@unique([userId, operationId])
   @@index([branchId, serviceDate])
 }
 
@@ -181,6 +197,7 @@ model BranchStaff {
 model Session {
   id               String   @id @default(uuid()) @db.Uuid
   userId           String   @db.Uuid
+  browserTabId     String?  @db.Uuid
   refreshTokenHash String   @unique
   expiresAt        DateTime
   createdAt        DateTime @default(now())

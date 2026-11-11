@@ -7,6 +7,7 @@ import { Roles, RolesGuard } from '../auth/roles.guard';
 import { ZodPipe } from '../common/zod.pipe';
 import { BranchesService } from './branches.service';
 import { BranchPatchSchema, BranchQuery, BranchQuerySchema, UserRoleSchema } from './branches.schemas';
+import { WriteKey, WriteIdentity, WriteHeader } from '../common/write-operation';
 
 const properties = {
   name: { type: 'string', minLength: 2, maxLength: 100 },
@@ -46,8 +47,9 @@ export class AdminBranchesController {
   @Get(':id')
   find(@Param('id', ParseUUIDPipe) id: string) { return this.branches.find(id); }
   @Post()
+  @WriteHeader()
   @ApiBody({ schema: { type: 'object', required: ['name', 'address'], properties } })
-  create(@Body(new ZodPipe(CreateBranchSchema)) body: CreateBranchDto) { return this.branches.create(body); }
+  create(@Body(new ZodPipe(CreateBranchSchema)) body: CreateBranchDto, @WriteKey() operation?: WriteIdentity) { return this.branches.create(body, operation); }
   @Patch(':id')
   @ApiOperation({ summary: 'Editar o desactivar una sucursal (isActive: false)' })
   @ApiBody({ schema: { type: 'object', minProperties: 1, additionalProperties: false, properties } })
@@ -93,6 +95,8 @@ export class AdminUsersController {
   @PageQueries()
   @ApiOperation({ summary: 'Consultar usuarios para gestionar personal; sin hashes ni sesiones' })
   users(@Query(new ZodPipe(BranchQuerySchema)) query: BranchQuery) { return this.branches.users(query); }
+  @Get(':id')
+  user(@Param('id', ParseUUIDPipe) id: string) { return this.branches.user(id); }
   @Patch(':id/role')
   @ApiOperation({ summary: 'Cambiar CUSTOMER/STAFF; no crea ni modifica administradores. CUSTOMER pierde asignaciones.' })
   @ApiBody({ schema: { type: 'object', required: ['role'], additionalProperties: false, properties: { role: { type: 'string', enum: ['CUSTOMER', 'STAFF'] } } } })

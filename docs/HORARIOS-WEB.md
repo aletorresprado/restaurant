@@ -48,6 +48,8 @@ Eliminar una excepción también puede devolver 409 si restaurar el horario sema
 
 Los PATCH envían solo campos modificados. No hay control de versiones: si varias personas cambian el mismo campo, prevalece el último cambio aceptado. Si se pierde la respuesta de un alta o falla con estado incierto, se bloquea su reenvío y se ofrece cerrar y revisar antes de repetir. No hay reintentos automáticos de escrituras ante errores de red; la unicidad por día/fecha de la API sigue vigente. Una eliminación ya aplicada puede devolver 404 al repetirla: revisar el listado actualizado.
 
+Las altas ahora se guardan con Idempotency-Key antes de enviar. Tras un corte o recarga, **Operaciones pendientes** permite recuperar el horario/excepción con sus datos originales, sin otra alta. Si fue eliminado después de crearse, devuelve 410 sin recrearlo. Ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md).
+
 ## API utilizada y continuación
 
 Con prefijo `/api/v1`, STAFF asignado/ADMIN usan GET/POST `/staff/branches/:branchId/schedules` y `/schedule-exceptions`, y PATCH/DELETE con el identificador del registro. Las excepciones aceptan `page` y `limit`. La vista efectiva usa GET público `/branches/:branchId/hours?date=YYYY-MM-DD`. Ver [OPERACION.md](OPERACION.md) para el contrato completo.

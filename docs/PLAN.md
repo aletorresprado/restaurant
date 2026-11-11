@@ -1,6 +1,6 @@
 # Plan de desarrollo de App Resto
 
-Actualizado: 6 de noviembre de 2026.
+Actualizado: 11 de noviembre de 2026.
 
 ## Objetivo
 
@@ -8,7 +8,7 @@ Construir un sistema de reservas y fidelización para un restaurante con varias 
 
 ## Estado y recorrido restante
 
-Las etapas 1 a 5 están implementadas y verificadas en desarrollo local. La etapa 5 incorpora movimientos de puntos, saldo, niveles, encuestas y ajustes auditados. La etapa 6 integra el diseño de Lovable al recorrido del cliente y la configuración operativa web: agenda, usuarios/asignaciones, sucursales, mesas, horarios, excepciones y bloqueos. No hay despliegue productivo. Falta revisar sesiones/almacenamiento y coordinación entre pestañas (6), y preparar el despliegue (7).
+Las etapas 1 a 6 están implementadas y verificadas en desarrollo local: persistencia, permisos, operación, reservas, fidelización e interfaz de clientes/personal. Incluyen cookies HttpOnly, reintentos de reservas y altas de gestión, y ajustes de puntos compartidos entre pestañas. La etapa 7 sigue pendiente: límites de intentos, CSP/HTTPS real, recuperación/verificación de correo, mantenimiento, CI, respaldos y despliegue. No hay producción publicada.
 
 La [hoja de ruta a producción](PRODUCCION.md) desglosa esos pendientes, las decisiones del propietario y los criterios para publicar. Tener el código subido a GitHub o Swagger accesible localmente no completa la etapa de despliegue.
 
@@ -98,32 +98,34 @@ Decisiones: asistencia manual desde la agenda web o Swagger; no se admite correg
 
 Criterio de cierre: los eventos generan los puntos esperados una sola vez, incluso con reintentos; el cliente consulta su saldo e historial y el administrador puede auditar ajustes.
 
-## 6. Interfaz de clientes y personal — en curso
+## 6. Interfaz de clientes y personal — completada en desarrollo local
 
 - [x] Web adaptable en `apps/web`, basada en el diseño de Lovable y conectada a nuestra API.
 - [x] Registro/login, restauración y renovación de sesión y logout para la integración local.
 - [x] Sucursales reales, fecha de servicio, grupo, disponibilidad y confirmación sin cambiar reglas de negocio.
 - [x] Reservas propias, detalle, eventos y cancelación, con carga, errores y estados vacíos.
 - [x] Pruebas de cliente HTTP y recorrido de navegador en escritorio y móvil contra PostgreSQL.
-- [ ] Cerrar la revisión del almacenamiento y la recuperación de operaciones inciertas antes de producción.
-- [x] Sesiones independientes por pestaña y detección de copias mediante Web Locks; aislamiento de respuestas, renovación y logout al cambiar de login. Sin Web Locks, ingreso en memoria sin restauración tras recargar. Falta cerrar la revisión de almacenamiento/operaciones para producción.
+- [x] Sesiones web con cookies HttpOnly, revocación inmediata por pestaña, CSRF/origen y minimización de confirmaciones resueltas. La recuperación de reservas conserva únicamente los intentos pendientes.
+- [x] Recuperación de altas de sucursales, mesas, horarios, excepciones y bloqueos con UUID transaccional; panel de pendientes y borradores/ajustes de puntos compartidos entre pestañas, con autor inmutable y limpieza de resultados resueltos.
+- [x] Sesiones independientes por pestaña y detección de copias mediante Web Locks; aislamiento de respuestas, renovación y logout al cambiar de login. Sin Web Locks, ingreso en memoria sin restauración tras recargar. Los límites de privacidad y los controles de despliegue quedan documentados para la etapa 7.
 - [x] Consulta de asistencia en detalle, saldo/nivel/historial en Mis reservas y encuesta tras una visita finalizada.
 - [x] Agenda de sucursales autorizadas, asistencia, ausencia, cancelación e historial desde la web.
-- [x] Administración de usuarios CUSTOMER/STAFF, asignaciones y fidelización con ajustes auditados y reintentos seguros en la misma pestaña.
+- [x] Administración de usuarios CUSTOMER/STAFF, asignaciones y fidelización con ajustes auditados y recuperación segura compartida entre pestañas.
 - [x] Formularios de alta/edición/activación/desactivación de sucursales, con validaciones compartidas, conflictos por reservas vigentes y tratamiento de altas con respuesta incierta.
 - [x] Imagen propia por sucursal: selección, vista previa, carga/reemplazo/borrado ADMIN, persistencia PostgreSQL y tarjetas del inicio con respaldo general.
 - [x] Gestión web de mesas por sucursal autorizada: listado paginado, alta, capacidad, estados, confirmación y errores por reservas vigentes.
 - [x] Horarios semanales y excepciones desde la web: altas, edición, cierres/desactivación/eliminación con confirmación, servicio por fecha y conflictos de la API.
 - [x] Bloqueos temporales por mesa: inicio/fin en zona del restaurante, motivo, revisión/confirmación, consulta paginada, retirada y conflictos de la API.
 - [x] Niveles con estrella de color y nombre, y leyenda de umbrales compartidos en Mis puntos; no cambia la lógica de puntos.
+- [x] Confirmación de reservas con UUID persistente por operación, recuperación manual tras cortes/recargas y registro compartido por cuenta entre pestañas; API con índice único y transacción para evitar duplicados del mismo intento.
 
-Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual y se conectan las funciones reales de la API. Ver [FRONTEND.md](FRONTEND.md) para procedencia y [GESTION-WEB.md](GESTION-WEB.md) para gestión. La configuración operativa principal ya tiene formularios; la etapa 6 sigue abierta por sesiones/almacenamiento y coordinación entre pestañas.
+Decisiones: SPA React/Vite con TanStack Router, sin servicios Lovable ni un segundo backend. Se conserva el estilo visual y se conectan las funciones reales de la API. Ver [FRONTEND.md](FRONTEND.md) para procedencia y [GESTION-WEB.md](GESTION-WEB.md) para gestión. La configuración operativa y su recuperación están completas y probadas en desarrollo; quedan los controles de publicación de la etapa 7.
 
 Criterio de cierre: los recorridos principales funcionan desde la interfaz contra la API real, con estados de carga, errores, acceso por rol y uso en pantallas pequeñas.
 
 ## 7. Preparación del primer despliegue — pendiente
 
-1. Agregar límites de intentos de autenticación, CORS por dominio y HTTPS.
+1. Agregar límites de intentos de autenticación y CSP; validar la configuración CORS existente y HTTPS en el entorno real.
 2. Resolver recuperación de contraseña y verificación de correo; elegir proveedor solo si hace falta.
 3. Definir limpieza de sesiones vencidas, logs operativos y comprobación de disponibilidad de la base.
 4. Configurar integración continua para compilación, pruebas y migraciones en una base aislada.
@@ -134,7 +136,7 @@ Criterio de cierre: despliegue reproducible con configuración separada, respald
 
 Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye seguridad de autenticación, reconciliación de reintentos de reserva, CI, entorno de prueba, migraciones, restauración y validación del primer lanzamiento. Todos esos controles de publicación siguen pendientes.
 
-## Punto de reanudación — actualizado el 6 de noviembre de 2026
+## Punto de reanudación — actualizado el 11 de noviembre de 2026
 
 Entrega actual: fidelización persistente con estrellas de niveles, agenda/administración web, sucursales con imágenes y gestión de mesas, horarios, excepciones y bloqueos temporales. El propietario confirmó el acceso ADMIN y probó sucursales, mesas y horarios. Documentación en [FIDELIZACION.md](FIDELIZACION.md), [GESTION-WEB.md](GESTION-WEB.md), [IMAGENES-SUCURSALES.md](IMAGENES-SUCURSALES.md), [MESAS-WEB.md](MESAS-WEB.md), [HORARIOS-WEB.md](HORARIOS-WEB.md) y [BLOQUEOS-WEB.md](BLOQUEOS-WEB.md). Se conserva la lógica de reservas, permisos y ocupación. No hay servicios externos nuevos ni despliegue productivo.
 
@@ -142,7 +144,23 @@ Para retomar, seguir este orden:
 
 La revisión actual aborda **sesiones y almacenamiento para producción**: coordinación entre pestañas, renovación/logout y recuperación de operaciones inciertas. La política se documenta y prueba antes de cambiar el contrato de autenticación; después se continuará con los controles de la etapa 7. No considerar el proyecto listo para producción por completar los formularios operativos.
 
-Avance de sesiones: se implementó la política de pestañas independientes, bloqueo de copias, renovación por sesión y descarte de respuestas de otro login. Ver [SESIONES-WEB.md](SESIONES-WEB.md). Próximo paso: idempotencia/reconciliación de reservas y recuperación de operaciones inciertas al recargar; luego cerrar la decisión de almacenamiento para producción y los controles de la etapa 7. La etapa 6 sigue en curso. Esta entrega no cambia el contrato de autenticación ni requiere migraciones o dependencias nuevas.
+Avance de sesiones: se implementó la política de pestañas independientes, bloqueo de copias, renovación por sesión y descarte de respuestas de otro login. Ver [SESIONES-WEB.md](SESIONES-WEB.md). Esa entrega no cambió el contrato de autenticación ni agregó migraciones/dependencias. El incremento del 11 de noviembre, descrito a continuación, incorpora la recuperación de reservas; la etapa 6 sigue en curso por los pendientes de almacenamiento y otros formularios.
+
+Entrega del 11 de noviembre: la recuperación de reservas ya está implementada. La séptima migración `20261111000100_reservation_operations` agrega UUID nullable e índice único por usuario; la web siempre envía UUID y lo conserva antes del POST. Un reintento recupera la reserva actual, sin duplicar mesa/evento ni reactivar estados terminales. El registro sin tokens en localStorage y Web Locks permite recarga, nuevo login y recuperación entre pestañas de la misma cuenta. Clientes antiguos sin UUID siguen funcionando, sin garantía ante reenvíos. Detalles, instalación y límites en [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md).
+
+Validación: compilación del monorepo, tipos, esquema Prisma, 39 pruebas unitarias (17 API + 22 web) e integración PostgreSQL ampliada. Dieciocho recorridos de navegador verificados: la ejecución general aprobó 17 y falló bloqueos de escritorio por un error de conexión durante un refresco; su repetición aislada aprobó en 9,5 segundos. Recuperación de reservas aprobada en escritorio y móvil, con respuesta perdida, recarga, cuentas separadas, dos pestañas, fallo previo al servidor y almacenamiento bloqueado. No quedan fallos funcionales reproducidos; conservar este incidente de entorno como límite de la corrida general.
+
+Entrega posterior de privacidad: octava migración `20261111000200_browser_sessions`, sesiones opacas con cookies HttpOnly por pestaña, ocho horas de duración absoluta por defecto y revocación inmediata al salir. La SPA no recibe ni persiste JWT/refresh; sessionStorage solo conserva UUID público y la recuperación de reservas elimina datos resueltos. CORS/Origin se configuran con WEB_ORIGINS, obligatorio y HTTPS en producción. Swagger conserva Bearer. Ver [SESIONES-WEB.md](SESIONES-WEB.md).
+
+Validación de privacidad: 42 pruebas unitarias (20 API + 22 web), integración PostgreSQL ampliada con cookies/CSRF, compilación del monorepo, tipos y esquema Prisma. Suite completa de dieciocho recorridos de navegador aprobada en escritorio/móvil; tras agregar revocación de la sesión propia anterior al cambiar de cuenta se repitieron los seis recorridos de gestión/sesiones y aprobaron. Primera regeneración de Prisma bloqueada por la DLL en uso: se detuvo únicamente el árbol de desarrollo de este proyecto, se regeneró y se reiniciaron los servicios. No hay migraciones destructivas ni cambios de reglas de negocio.
+
+Entrega de gestión: novena migración `20261111000300_management_operations`, altas con Idempotency-Key y resultado actual, 410 para un recurso ya eliminado, permisos vigentes y panel de recuperación. Los ajustes comparten borrador/UUID entre pestañas, no cambian de autor y reconocen claves históricas en mayúsculas sin reescribir saldos. Ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). La etapa 6 queda completada en desarrollo local.
+
+Validación de gestión: build del monorepo, tipos y esquema Prisma correctos, 49 pruebas unitarias (20 API + 29 web), integración PostgreSQL ampliada y veinte recorridos completos de navegador aprobados, con escritorio/móvil. Las cinco altas se prueban en concurrencia, con resultado editado/eliminado, rollback y retirada de permisos. La UI reproduce respuestas perdidas, recarga, cuentas separadas, dos recuperaciones simultáneas y revisión/cancelación de borradores de puntos. Se revisaron las capturas del panel; solo se agregaron textos de privacidad/imports después de esa suite y se recompiló.
+
+Aceptación manual del propietario: un borrador de +2 puntos se mostró en dos pestañas y **Volver a editar** lo retiró de ambas, dejando los campos disponibles. No se confirmó un movimiento en ese recorrido. Se documenta la distinción entre revisar/cancelar un borrador y confirmar la aplicación de puntos.
+
+Próximo paso actualizado: etapa 7, empezando por límites de intentos en autenticación y operaciones sensibles. Continuar con CSP, recuperación/verificación de correo, mantenimiento de sesiones, CI con bases aisladas y validación de despliegue/respaldos. Antes de publicar se requiere un entorno de pruebas y revisar configuración HTTPS/CORS, accesibilidad y rendimiento; no confundir el cierre funcional con producción.
 
 Comprobaciones de la entrega de sesiones: 33 pruebas unitarias (17 API y 16 web), tipos del monorepo y compilación web. El navegador amplía la suite a dieciséis recorridos (ocho por escritorio/móvil), incluyendo pestaña copiada, sesiones independientes de una misma cuenta, otra cuenta, dos renovaciones simultáneas, logout aislado y funcionamiento en memoria sin Web Locks. Los límites de almacenamiento y operaciones inciertas se conservan documentados.
 

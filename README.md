@@ -99,7 +99,7 @@ Todos los endpoints llevan el prefijo `/api/v1/auth`:
 | POST | `/logout` | refreshToken |
 | GET | `/me` | Header Authorization: Bearer accessToken |
 
-Registro y login devuelven `user`, `accessToken` y `refreshToken`. La contraseña requiere al menos 8 caracteres, una mayúscula y un número; máximo 72 bytes por el límite de bcrypt. Correos normalizados a minúsculas. Nunca se devuelven hashes de contraseñas.
+Los endpoints Bearer de esta tabla (Swagger/clientes API) devuelven `user`, `accessToken` y `refreshToken`. La web usa `/auth/web/login`, `/auth/web/register` y `/auth/web/logout`, con cookies HttpOnly, y recibe solo el usuario. La contraseña requiere al menos 8 caracteres, una mayúscula y un número; máximo 72 bytes por el límite de bcrypt. Correos normalizados a minúsculas. Nunca se devuelven hashes de contraseñas.
 
 Al renovar, reemplazar ambos tokens en el cliente: el refresh anterior deja de funcionar. Logout revoca el refresh presentado; el access token sigue vigente hasta su expiración (15 minutos por defecto). No se implementa todavía revocación inmediata del access token ni logout de todos los dispositivos. Las sesiones vencidas se rechazan, pero aún no hay tarea de limpieza de sus registros.
 
@@ -144,13 +144,17 @@ Los intervalos se consideran `[inicio, fin)`: dos servicios o bloqueos pueden to
 Ver [la guía de reservas](docs/RESERVAS.md) para ejemplos y políticas completas.
 
 - Público: `GET /api/v1/branches/:branchId/availability?date=2026-11-02&partySize=4`.
-- CUSTOMER: `POST /api/v1/reservations`, con `branchId`, `serviceDate`, `startAt` y `partySize`.
+- CUSTOMER: `POST /api/v1/reservations`, con `branchId`, `serviceDate`, `startAt`, `partySize` y `operationId` (UUID por intento, reutilizado en sus reintentos).
 - Usuario autenticado: `GET /api/v1/reservations`, `GET /api/v1/reservations/:id` y `POST /api/v1/reservations/:id/cancel`, únicamente para sus reservas.
 - Personal autorizado: agenda `GET /api/v1/staff/branches/:branchId/reservations?date=2026-11-02`, detalle por ID y cancelación del restaurante con motivo obligatorio.
 
 Duración de 120 minutos; una mesa por reserva, asignada por menor capacidad suficiente, sin combinar mesas. Se exige inicio futuro alineado con los turnos del servicio y fin dentro de su horario. El cliente cancela con al menos 6 horas de anticipación; el personal puede cancelar antes del inicio. No se envían notificaciones ni se implementa todavía reprogramación.
 
 La disponibilidad es orientativa: al confirmar se vuelve a comprobar bajo transacción. Se rechazan bloqueos, reducción de capacidad, cambios de estado o de horarios que invaliden reservas confirmadas vigentes. Los cambios operativos no cancelan reservas automáticamente.
+
+**Recuperación ante cortes de conexión (11 de noviembre):** la web guarda la confirmación antes del primer envío y ofrece **Verificar y reintentar** o **Retomar confirmación** tras una recarga o un nuevo ingreso con la misma cuenta. El servidor reconoce `(usuario, operationId)` y devuelve la reserva existente, sin otra mesa ni evento, incluso si ya está cancelada. Cambiar los datos de esa operación devuelve 409. La confirmación pendiente se comparte entre pestañas mediante un registro por usuario en `localStorage` y Web Locks; la sesión utiliza una cookie HttpOnly. Si no se puede guardar/coordinar el intento, no se envía. No se reintenta automáticamente. El campo es opcional solo por compatibilidad con clientes antiguos: un POST sin UUID no tiene esta protección. Ver [RECUPERACION-RESERVAS.md](docs/RECUPERACION-RESERVAS.md) para pruebas, privacidad, límites y Swagger.
+
+Esta entrega agrega la **séptima migración**, `20261111000100_reservation_operations`, aplicada localmente. En otra instalación ejecutar `pnpm.cmd --filter @repo/api db:generate`, `pnpm.cmd --filter @repo/api db:deploy` y `pnpm.cmd build` antes de reiniciar. Conserva las reservas existentes, sin cambios en duración, asignación, horarios o puntos; no requiere dependencias ni servicios nuevos.
 
 ## Asistencia y ausencias
 
@@ -160,7 +164,7 @@ La fidelización agrega la quinta migración, `20261103000100_loyalty`. Para act
 
 ### Agenda y administración web
 
-Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 6 de noviembre** en [docs/PLAN.md](docs/PLAN.md). La configuración operativa principal ya tiene gestión web; siguen revisión de sesiones/almacenamiento, coordinación entre pestañas y preparación productiva.
+Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 11 de noviembre** en [docs/PLAN.md](docs/PLAN.md). La configuración operativa principal ya tiene gestión web y las reservas permiten recuperar reintentos; las etapas funcionales 1–6 están verificadas en desarrollo local y sigue la preparación productiva de la etapa 7.
 
 Las cuentas STAFF ingresan a **Agenda** (`/personal`): sucursal asignada, fecha de servicio, reservas, asistencia, ausencia, cancelación e historial. Las cuentas ADMIN también acceden a **Administración** (`/administracion`): **Usuarios y puntos** para roles, asignaciones y ajustes auditados; **Sucursales** para crear, editar, activar y desactivar, con validación de datos y confirmación de desactivación. Los cambios actualizan el catálogo y las sucursales disponibles para agenda/asignaciones. La API rechaza desactivar sucursales con reservas vigentes. Una sucursal nueva necesita mesas y horarios para ofrecer turnos; esa configuración sigue disponible desde Swagger.
 
@@ -186,6 +190,12 @@ Cada sucursal puede tener una **imagen propia para el inicio**. En Administraci�
 
 Esta función agrega la sexta migración, `20261104000100_branch_images`, ya aplicada en el equipo de desarrollo. En otras instalaciones, detener la API si bloquea Prisma en Windows y ejecutar `pnpm.cmd --filter @repo/api db:generate`, `pnpm.cmd --filter @repo/api db:deploy` y `pnpm.cmd build` antes de reiniciar `pnpm.cmd dev`. Las copias de seguridad de PostgreSQL deben incluir las imágenes. Ver [IMAGENES-SUCURSALES.md](docs/IMAGENES-SUCURSALES.md).
 
+**Recuperación de gestión:** las altas de sucursales, mesas, horarios, excepciones y bloqueos usan `Idempotency-Key`. Si se corta la conexión, abrir **Operaciones pendientes** debajo del menú, revisar destino/datos y pulsar **Verificar y reintentar**. Se conserva el UUID al recargar o volver a ingresar y se comparte por cuenta entre pestañas; recuperar no duplica el alta ni recrea un registro eliminado. Los borradores/ajustes de puntos se comparten por administrador y cliente, con UUID y autor fijos tras intentar enviarlos. Solo persisten pendientes; se eliminan al resolver. Sin almacenamiento o Web Locks no se envía. PATCH/PUT/DELETE mantienen sus reglas, sin control de versiones nuevo. Ver [RECUPERACION-GESTION.md](docs/RECUPERACION-GESTION.md), incluidos datos conservados en equipos compartidos y compatibilidad de clientes antiguos sin clave.
+
+La **novena migración**, `20261111000300_management_operations`, está aplicada localmente. Agrega el registro transaccional de altas por usuario y operación; no recalcula puntos ni modifica registros anteriores. En otra instalación, detener la API si bloquea Prisma en Windows, generar cliente, aplicar migraciones y compilar antes de reiniciar. No requiere dependencias ni cuentas nuevas. Esta entrega completa la etapa 6 en desarrollo local; siguen límites de intentos, CSP, recuperación de correo e infraestructura de la etapa 7, según [PLAN.md](docs/PLAN.md).
+
+Prueba manual confirmada por el propietario: revisar un ajuste de +2 puntos muestra el borrador en dos pestañas; **Volver a editar** lo retira de ambas y habilita nuevamente los campos. Revisar/cancelar no aplica puntos; solo **Confirmar ajuste** envía el movimiento. Validación automatizada de esta entrega: 49 pruebas unitarias, integración PostgreSQL y veinte recorridos de navegador aprobados.
+
 ## Validación
 
 ```powershell
@@ -195,11 +205,13 @@ pnpm.cmd lint
 pnpm.cmd --filter @repo/api exec prisma validate
 ```
 
-Las 17 pruebas de API cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas, cancelación y tiempos de asistencia/ausencia. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
+Las 20 pruebas de API cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas, cancelación y tiempos de asistencia/ausencia. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
 
-El frontend agrega pruebas de renovación de sesión, errores de conexión, logout y fechas; `pnpm.cmd test` incluye API y web. Para el recorrido real en navegador, después de compilar e instalar Chromium con `pnpm.cmd --filter @repo/web exec playwright install chromium`, ejecutar `pnpm.cmd --filter @repo/web test:e2e`. Usa PostgreSQL de desarrollo y recursos temporales propios. Detalles y límites de sesión en [FRONTEND.md](docs/FRONTEND.md).
+El frontend agrega pruebas de sesiones por cookie, errores de conexión, logout, privacidad de confirmaciones y fechas; `pnpm.cmd test` incluye API y web. Para el recorrido real en navegador, después de compilar e instalar Chromium con `pnpm.cmd --filter @repo/web exec playwright install chromium`, ejecutar `pnpm.cmd --filter @repo/web test:e2e`. Usa PostgreSQL de desarrollo y recursos temporales propios. Detalles y límites de sesión en [FRONTEND.md](docs/FRONTEND.md).
 
-**Sesiones por pestaña:** cada pestaña inicia su propia sesión; cerrar una no cierra las demás. La recarga conserva el acceso cuando el navegador admite Web Locks. Duplicar una pestaña con sesión pide ingresar en la copia y conserva la original, evitando competir por un refresh token de un solo uso. Sin esa protección se permite login en memoria, sin restaurarlo al recargar. Las respuestas pendientes de otro inicio de sesión no se muestran ni se reenvían bajo el nuevo. No cambia el contrato de la API ni requiere migraciones/dependencias. Los tokens siguen en `sessionStorage`, accesibles a JavaScript: la revisión de almacenamiento para producción e idempotencia de reservas permanece pendiente. Ver [SESIONES-WEB.md](docs/SESIONES-WEB.md) para alcance, pruebas y límites.
+**Sesiones y privacidad (11 de noviembre):** la web ya no recibe ni guarda tokens accesibles a JavaScript. Usa una cookie HttpOnly por pestaña, con vencimiento absoluto de ocho horas por defecto y revocación inmediata al salir. sessionStorage conserva únicamente un UUID público que no autentica sin su cookie. Web Locks impide restaurar una copia de la sesión original. Sin esa protección el ingreso funciona en memoria y requiere login al recargar; confirmar reservas requiere Web Locks y almacenamiento disponible. Las respuestas de una cuenta anterior no se muestran ni se reenvían bajo la nueva. Resolver una confirmación elimina su registro local; los intentos pendientes se conservan por cuenta para recuperar cortes. Swagger conserva Bearer/JWT. Ver [SESIONES-WEB.md](docs/SESIONES-WEB.md) para CSRF, privacidad y límites de XSS.
+
+La **octava migración**, `20261111000200_browser_sessions`, está aplicada localmente. En otra instalación generar Prisma, aplicar migraciones y compilar antes de arrancar. Tras actualizar, recargar e ingresar de nuevo: se elimina el almacenamiento anterior con tokens, sin cambiar contraseñas ni datos del negocio. Web y `/api/v1` deben compartir origen (Vite ya hace proxy). `WEB_ORIGINS` admite localhost:5173 y 127.0.0.1:5173 en desarrollo; producción exige una lista explícita de orígenes HTTPS. `WEB_SESSION_HOURS` permite 1–24 horas. CORS se restringe a esos orígenes, sin credenciales entre orígenes, y las escrituras web validan Origin. En producción la cookie usa Secure y prefijo `__Host-`; debe existir HTTPS. No hay dependencias ni servicios nuevos.
 
 Para probar contra una base real ya migrada, compilar y ejecutar `pnpm.cmd --filter @repo/api test:integration`. Comprueba autenticación, permisos y operación; además prueba disponibilidad, reserva concurrente, asignación por capacidad, privacidad, agenda, cancelación y protección de configuración. Inicia una API temporal y elimina sus propios usuarios, sesiones, sucursales y recursos asociados, incluidas reservas y eventos. No ejecutarlo contra producción.
 

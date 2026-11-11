@@ -8,7 +8,7 @@ export type User = {
   phone: string | null;
   role: 'CUSTOMER' | 'STAFF' | 'ADMIN';
 };
-export type Session = { user: User; accessToken: string; refreshToken: string };
+export type Session = { user: User };
 export type Branch = {
   id: string;
   name: string;
@@ -41,18 +41,17 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public code?: string,
   ) {
     super(message);
   }
 }
 
-const key = 'app-resto-session-v1';
+const key = 'app-resto-web-tab-v1';
 let session: Session | null = null;
-let refreshing: { identity: number; promise: Promise<void> } | null = null;
+let tabId: string | null = null;
 let loggingOut = false;
-let generation = 0;
 let identity = 0;
-let ownerId: string | null = null;
 let releaseOwnership: (() => void) | null = null;
 const subscribers = new Set<() => void>();
 export const onSessionChange = (fn: () => void) => {
@@ -62,80 +61,61 @@ export const onSessionChange = (fn: () => void) => {
   };
 };
 export const getSession = () => session;
+export const getSessionTabId = () => tabId;
 export const getSessionIdentity = () => identity;
-export function setSession(value: Session | null, rotation = false) {
-  if (!rotation && (!value || value.refreshToken !== session?.refreshToken)) identity++;
+export function setSession(value: Session | null, profileUpdate = false) {
+  if (!profileUpdate) identity++;
   session = value;
-  generation++;
   if (!value) {
+    tabId = null;
     releaseOwnership?.();
     releaseOwnership = null;
-    ownerId = null;
-  }
-  try {
-    value && ownerId
-      ? sessionStorage.setItem(key, JSON.stringify({ ...value, ownerId }))
-      : sessionStorage.removeItem(key);
-  } catch {
-    /* Session can remain in memory when storage is unavailable. */
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      /* Memory-only tab. */
+    }
   }
   subscribers.forEach((fn) => fn());
 }
-export async function establishSession(value: Session) {
-  const id = crypto.randomUUID();
+export async function establishSession(value: Session, id = crypto.randomUUID()) {
   const release = await claimSession(id);
   releaseOwnership?.();
   releaseOwnership = release ?? null;
-  ownerId = release ? id : null;
+  tabId = id;
+  try {
+    if (release) sessionStorage.setItem(key, id);
+    else sessionStorage.removeItem(key);
+    sessionStorage.removeItem('app-resto-session-v1');
+  } catch {
+    /* No credentials are ever persisted by JavaScript. */
+  }
   setSession(value);
 }
 export async function restoreSession(): Promise<string | null> {
-  const version = generation;
+  const version = identity;
   try {
-    const value = JSON.parse(sessionStorage.getItem(key) ?? 'null');
-    if (
-      value &&
-      typeof value.accessToken === 'string' &&
-      typeof value.refreshToken === 'string' &&
-      typeof value.user?.id === 'string' &&
-      typeof value.user?.email === 'string' &&
-      typeof value.user?.firstName === 'string' &&
-      typeof value.user?.lastName === 'string' &&
-      ['CUSTOMER', 'STAFF', 'ADMIN'].includes(value.user?.role)
-    ) {
-      // Legacy sessions have no owner ID. Their token fingerprint also detects copies.
-      const id =
-        typeof value.ownerId === 'string'
-          ? value.ownerId
-          : Array.from(
-              new Uint8Array(
-                await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value.refreshToken)),
-              ),
-            )
-              .map((byte) => byte.toString(16).padStart(2, '0'))
-              .join('');
-      const release = await claimSession(id);
-      if (generation !== version) {
-        release?.();
-        return null;
-      }
-      if (!release) {
-        setSession(null);
-        return release === null
-          ? 'Esta sesión está en uso en otra pestaña. Ingresá nuevamente en esta pestaña.'
-          : 'Ingresá nuevamente. Este navegador no permite restaurar la sesión de forma segura.';
-      }
-      releaseOwnership?.();
-      releaseOwnership = release;
-      ownerId = id;
-      // Keep the cached profile private until StoreProvider verifies /auth/me.
-      // Login remains available while that verification is pending or offline.
-      session = value;
-      identity++;
-      generation++;
-    } else if (generation === version) setSession(null);
+    // Previous JWT sessions require a new login; never migrate their secrets.
+    sessionStorage.removeItem('app-resto-session-v1');
+    const id = sessionStorage.getItem(key);
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+    const release = await claimSession(id);
+    if (identity !== version) {
+      release?.();
+      return null;
+    }
+    if (!release) {
+      setSession(null);
+      return release === null
+        ? 'Esta sesión está en uso en otra pestaña. Ingresá nuevamente en esta pestaña.'
+        : 'Ingresá nuevamente. Este navegador no permite restaurar la sesión de forma segura.';
+    }
+    releaseOwnership?.();
+    releaseOwnership = release;
+    tabId = id;
+    identity++;
   } catch {
-    if (generation === version) setSession(null);
+    if (identity === version) setSession(null);
   }
   return null;
 }
@@ -144,7 +124,7 @@ export const apiUrl = (path: string) => `${base}${path}`;
 async function raw<T>(
   path: string,
   options: RequestInit,
-  token?: string,
+  currentTab?: string,
   responseType: 'json' | 'blob' = 'json',
 ): Promise<T> {
   let response: Response;
@@ -156,8 +136,9 @@ async function raw<T>(
           ? { 'Content-Type': 'application/json' }
           : {}),
         ...options.headers,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(currentTab ? { 'X-Web-Session': currentTab } : {}),
       },
+      credentials: 'same-origin',
       signal: options.signal ?? AbortSignal.timeout(15000),
       cache: 'no-store',
     });
@@ -173,9 +154,23 @@ async function raw<T>(
         : Array.isArray(body?.message)
           ? body.message.join('. ')
           : 'No se pudo completar la operación.';
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, body?.code);
   }
   return body as T;
+}
+export async function signInSession(mode: 'login' | 'register', body: unknown) {
+  if (new URL(base, window.location.href).origin !== window.location.origin)
+    throw new ApiError(0, 'La web y la API deben compartir origen para ingresar de forma segura.');
+  const id = crypto.randomUUID();
+  const previousTab = tabId; // Only an owned tab, never a copied storage hint.
+  const value = await raw<Session>(
+    `/auth/web/${mode}`,
+    { method: 'POST', body: JSON.stringify(body) },
+    id,
+  );
+  if (previousTab)
+    await raw('/auth/web/logout', { method: 'POST', body: '{}' }, previousTab);
+  await establishSession(value, id);
 }
 export async function api<T>(
   path: string,
@@ -183,77 +178,38 @@ export async function api<T>(
   authenticated = false,
   responseType: 'json' | 'blob' = 'json',
 ): Promise<T> {
-  const oldToken = session?.accessToken;
-  const userId = session?.user.id;
-  const version = generation;
-  const requestIdentity = identity;
-  if (authenticated && (!session || loggingOut)) throw new ApiError(401, 'Ingresá para continuar.');
+  const version = identity;
+  const currentTab = tabId;
+  if (authenticated && (!currentTab || loggingOut))
+    throw new ApiError(401, 'Ingresá para continuar.');
   try {
-    const result = await raw<T>(path, options, authenticated ? oldToken : undefined, responseType);
-    if (authenticated && identity !== requestIdentity)
+    const result = await raw<T>(
+      path,
+      options,
+      authenticated ? currentTab! : undefined,
+      responseType,
+    );
+    if (authenticated && identity !== version)
       throw new ApiError(
         !options.method || options.method === 'GET' ? 401 : 0,
         'La sesión cambió. Volvé a consultar el estado de la operación.',
       );
     return result;
   } catch (error) {
-    if (
-      !authenticated ||
-      !(error instanceof ApiError) ||
-      error.status !== 401 ||
-      !session ||
-      loggingOut ||
-      identity !== requestIdentity
-    )
-      throw error;
-    // An earlier request may already have rotated the token while this one was in flight.
-    if (session.accessToken === oldToken && version === generation) {
-      if (!refreshing || refreshing.identity !== requestIdentity) {
-        const refreshVersion = generation;
-        const current = { identity: requestIdentity, promise: Promise.resolve() };
-        current.promise = raw<Session>('/auth/refresh', {
-          method: 'POST',
-          body: JSON.stringify({ refreshToken: session.refreshToken }),
-        })
-          .then((value) => {
-            if (generation === refreshVersion) setSession(value, true);
-          })
-          .catch((error) => {
-            if (generation === refreshVersion && error instanceof ApiError && error.status === 401)
-              setSession(null);
-            throw error;
-          })
-          .finally(() => {
-            if (refreshing === current) refreshing = null;
-          });
-        refreshing = current;
-      }
-      await refreshing.promise;
-    }
-    if (!session || session.user.id !== userId || identity !== requestIdentity)
-      throw new ApiError(401, 'La sesión cambió. Ingresá nuevamente.');
-    const result = await raw<T>(path, options, session.accessToken, responseType);
-    if (identity !== requestIdentity)
-      throw new ApiError(
-        !options.method || options.method === 'GET' ? 401 : 0,
-        'La sesión cambió. Volvé a consultar el estado de la operación.',
-      );
-    return result;
+    if (authenticated && identity === version && error instanceof ApiError && error.status === 401)
+      setSession(null);
+    throw error;
   }
 }
 export const post = <T>(path: string, body: unknown, authenticated = false) =>
   api<T>(path, { method: 'POST', body: JSON.stringify(body) }, authenticated);
 export async function logoutSession() {
   loggingOut = true;
-  const logoutIdentity = identity;
+  const version = identity;
+  const currentTab = tabId;
   try {
-    if (refreshing?.identity === logoutIdentity) await refreshing.promise;
-    if (session && identity === logoutIdentity)
-      await raw('/auth/logout', {
-        method: 'POST',
-        body: JSON.stringify({ refreshToken: session.refreshToken }),
-      });
-    if (identity === logoutIdentity) setSession(null);
+    if (currentTab) await raw('/auth/web/logout', { method: 'POST', body: '{}' }, currentTab);
+    if (identity === version) setSession(null);
   } finally {
     loggingOut = false;
   }

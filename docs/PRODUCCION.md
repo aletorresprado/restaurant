@@ -1,10 +1,10 @@
 # Hoja de ruta a producción
 
-Actualizado: 6 de noviembre de 2026.
+Actualizado: 11 de noviembre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–5 del [plan](PLAN.md) están implementadas. Hay seis migraciones versionadas, 17 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes e imágenes de sucursales. El frontend agrega 16 pruebas unitarias y dieciséis recorridos de navegador contra la base real: cliente, gestión, sucursales, mesas, horarios, bloqueos y sesiones en escritorio/móvil. Incluyen zona del restaurante distinta de la del navegador, reservas protegidas, respuestas perdidas, estrellas de niveles y pestañas independientes. La etapa 6 sigue abierta por revisión del almacenamiento y operaciones inciertas entre pestañas/recargas.
+Las etapas 1–6 del [plan](PLAN.md) están implementadas en desarrollo local. Hay nueve migraciones versionadas, 20 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes, imágenes e idempotencia de reservas. El frontend agrega 29 pruebas unitarias y veinte recorridos de navegador contra la base real: cliente, gestión, sucursales, mesas, horarios, bloqueos, sesiones y recuperación de reservas en escritorio/móvil. Incluyen respuestas perdidas, recarga sin reenvío automático, dos pestañas recuperando una misma reserva y almacenamiento bloqueado. La recuperación de altas y ajustes entre pestañas está implementada; ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). El trabajo restante corresponde a publicación/operación de la etapa 7. Las sesiones web ya usan cookies HttpOnly; ver SESIONES-WEB.md.
 
 La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones, puntos y configuración operativa. Siguen pendientes infraestructura e integración continua.
 
@@ -23,10 +23,10 @@ Cierre: el personal completa el ciclo de una reserva y los puntos resultantes so
 
 La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplican a nuevos registros; el historial anterior no se recalcula. Reconocimientos anteriores requieren ajustes administrativos explícitos. Ver [ASISTENCIA.md](ASISTENCIA.md) y [FIDELIZACION.md](FIDELIZACION.md). Antes de operar, definir el procedimiento para corregir errores de asistencia y revisar reservas que permanezcan CONFIRMED después del servicio.
 
-## 2. Construir la interfaz — etapa 6, pendiente
+## 2. Interfaz — etapa 6 completada en desarrollo; validaciones de publicación pendientes
 
 - [x] Web adaptable elegida: React/Vite, Tailwind y TanStack Router, adaptada del diseño de Lovable.
-- [x] Registro, login y sesión para integración local; quedan pendientes recuperación de cuenta y revisión de sesión entre pestañas/almacenamiento para producción.
+- [x] Registro, login y sesión para integración local; sesiones HttpOnly y coordinación entre pestañas implementadas; recuperación pública de cuenta pendiente en etapa 7.
 - [x] Sucursal, fecha de servicio, tamaño de grupo, turnos libres y confirmación conectados a la API.
 - [x] Reservas propias, cancelaciones y consulta de fidelización/encuestas para clientes.
 - [x] Asistencia para el personal y ajustes de puntos para administración desde la interfaz.
@@ -35,21 +35,22 @@ La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplic
 - [x] Formularios web de mesas para STAFF asignado y ADMIN, con conflictos por reservas y estados persistentes.
 - [x] Horarios semanales, excepciones por fecha y consulta del servicio efectivo desde la web, con conflictos y confirmaciones.
 - [x] Bloqueos temporales por mesa desde la web, con zona del restaurante, revisión/confirmación, retirada y conflictos.
-- [ ] Resolver resultados inciertos al reservar: hoy no existe clave de idempotencia y repetir el POST puede crear otra reserva si queda otra mesa. Definir idempotencia en la API o un mecanismo de reconciliación antes de habilitar reintentos en la interfaz.
+- [x] Resolver resultados inciertos al reservar: UUID por operación en la API, índice único por cuenta y recuperación manual persistida entre recargas/pestañas. Sin UUID (clientes antiguos) o con otra operación no hay deduplicación; ver [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md).
 - [x] Mostrar fechas en la zona del restaurante y explicar los servicios que cruzan medianoche.
 - [ ] Verificar navegación con teclado, pantallas pequeñas, carga, errores, sesión vencida y turnos agotados durante la confirmación.
-- [ ] Probar recorridos completos de cliente, personal y administrador contra la API real.
+- [x] Recorridos completos de cliente, personal y administrador contra PostgreSQL local, con privacidad, roles, recuperación y escritorio/móvil. Repetir en el entorno de preproducción.
 
 Cierre: una persona puede completar los recorridos del producto sin depender de Swagger, incluidos errores y recuperación de sesión.
 
-El recorrido del cliente y la gestión del restaurante se conectan a la API real. Ver [FRONTEND.md](FRONTEND.md) y [GESTION-WEB.md](GESTION-WEB.md). La política de sesiones independientes por pestaña y protección de copias mediante Web Locks está implementada; ver [SESIONES-WEB.md](SESIONES-WEB.md). El almacenamiento actual usa sessionStorage, no cookies HttpOnly; requiere cerrar su revisión de seguridad antes del lanzamiento. Continúan pendientes idempotencia de reservas y coordinación de operaciones inciertas entre pestañas/recargas.
+El recorrido del cliente y la gestión del restaurante se conectan a la API real. La web usa cookies HttpOnly por pestaña, mantiene solamente un UUID público en sessionStorage y elimina confirmaciones locales resueltas. Validación de Origin/CSRF y CORS explícito ya implementadas; ver [SESIONES-WEB.md](SESIONES-WEB.md). Los intentos pendientes y ajustes inciertos requieren conservar información para recuperarse, con límites documentados en equipos compartidos. Altas y ajustes ya cuentan con recuperación compartida entre pestañas y minimización de resultados resueltos. Quedan CSP, límites de intentos y configuración real del despliegue.
 
 ## 3. Preparar seguridad y operación — etapa 7, pendiente
 
 - [ ] Agregar límites de intentos para registro, login, renovación y consultas que puedan saturar la API.
-- [ ] Restringir CORS a los dominios del producto. Actualmente `app.enableCors()` no aplica esa restricción; `NODE_ENV=production` no la configura automáticamente.
+- [x] CORS restringido a WEB_ORIGINS; producción exige orígenes HTTPS explícitos. La web/API usan el mismo origen, sin credenciales CORS. Verificar los valores del entorno de despliegue antes de publicar.
 - [ ] Definir verificación de correo y recuperación de contraseña, con tokens de un solo uso y vencimiento. Elegir un proveedor de correo solo después de acordar alcance y costo.
-- [ ] Definir si se requiere revocación inmediata de access tokens y cierre de todas las sesiones. Hoy logout revoca el refresh enviado; el access token dura hasta su expiración, salvo cuenta desactivada o permisos modificados en la base.
+- [x] Revocación inmediata de la sesión web por cookie al salir de su pestaña; guarda hash, caduca en ocho horas por defecto y comprueba estado/rol en la base.
+- [ ] Definir cierre global y revocación inmediata para los JWT de clientes Bearer/Swagger, que mantienen su contrato anterior. No confundirlos con las cookies web.
 - [ ] Programar limpieza de sesiones vencidas y definir conservación de bloqueos antiguos, eventos y datos de clientes.
 - [ ] Configurar logs operativos sin contraseñas, tokens ni datos personales innecesarios; definir acceso y retención.
 - [ ] Agregar comprobación de disponibilidad de PostgreSQL para supervisión. El endpoint `health` actual informa que el proceso responde, no valida la conexión a la base.
@@ -64,7 +65,7 @@ Cierre: configuración de producción explícita, políticas implementadas y pru
 - [ ] Acordar presupuesto, proveedor, región, dominio y responsables. No se presupone una cuenta externa ni un plan pago autorizado.
 - [ ] Crear entornos separados de desarrollo, prueba y producción, con bases y secretos independientes.
 - [ ] Elegir alojamiento para API, frontend y PostgreSQL; definir proceso de arranque, reinicio y acceso administrativo.
-- [ ] Configurar HTTPS y conectividad de base restringida a los servicios que la necesitan.
+- [ ] Configurar HTTPS y conectividad de base restringida a los servicios que la necesitan. Las cookies Secure/__Host- requieren HTTPS real en producción; no basta la variable NODE_ENV.
 - [ ] Inyectar `DATABASE_URL`, `JWT_ACCESS_SECRET`, expiraciones, `NODE_ENV` y `PORT` mediante el sistema de secretos del proveedor. No usar credenciales de `compose.yaml` ni copiar archivos `.env` locales.
 - [ ] Configurar CI para instalación con lockfile, generación Prisma, compilación, pruebas, tipos e integración sobre PostgreSQL aislado.
 - [ ] Definir ejecución de migraciones una sola vez por despliegue y permisos necesarios; no correr `prisma migrate dev` en producción.

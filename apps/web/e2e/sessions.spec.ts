@@ -73,31 +73,29 @@ test('tabs own independent sessions; copied storage cannot rotate or revoke the 
     expect(await page.evaluate(() => localStorage.length)).toBe(0);
     const owners = await Promise.all(
       [page, copied].map((tab) =>
-        tab.evaluate(() => JSON.parse(sessionStorage.getItem('app-resto-session-v1')!).ownerId),
+        tab.evaluate(() => sessionStorage.getItem('app-resto-web-tab-v1')),
       ),
     );
     expect(owners[0]).not.toBe(owners[1]);
 
-    // Force simultaneous 401s from actual pages; each must rotate its own server session.
-    let refreshes = 0;
-    for (const tab of [page, copied]) {
-      let rejected = false;
-      tab.on('request', (request) => {
-        if (request.url().endsWith('/auth/refresh')) refreshes++;
-      });
-      await tab.route('**/auth/me', async (route) => {
-        if (!rejected) {
-          rejected = true;
-          await route.fulfill({ status: 401, json: {} });
-        } else await route.continue();
-      });
-    }
+    // Opaque cookie sessions do not rotate JWTs; reload checks the database.
     await Promise.all([page.reload(), copied.reload()]);
     for (const tab of [page, copied])
       await expect(tab.getByRole('button', { name: 'Salir (Ana)' })).toBeVisible();
-    await expect.poll(() => refreshes).toBe(2);
     expect(await db.session.count({ where: { userId: ids[0] } })).toBe(2);
-
+    const cookies = (await context.cookies()).filter((cookie) =>
+      cookie.name.startsWith('resto-web-'),
+    );
+    expect(cookies.length).toBe(3);
+    for (const cookie of cookies) {
+      expect(cookie.httpOnly).toBe(true);
+      expect(cookie.sameSite).toBe('Strict');
+      expect(cookie.expires).toBe(-1);
+    }
+    const stored = await page.evaluate(() => Object.fromEntries(Object.entries(sessionStorage)));
+    expect(Object.keys(stored).filter(key => key.startsWith('app-resto-'))).toEqual(['app-resto-web-tab-v1']);
+    for (const cookie of cookies) expect(JSON.stringify(stored)).not.toContain(cookie.value);
+    expect(stored['app-resto-web-tab-v1']).toBe(owners[0]);
     await copied.getByRole('button', { name: 'Salir (Ana)' }).click();
     await expect(copied.getByRole('button', { name: 'Saliendo…' })).toHaveCount(0);
     await expect(copied.getByRole('button', { name: 'Salir (Ana)' })).toHaveCount(0);

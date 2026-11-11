@@ -48,7 +48,7 @@ Seleccionar una cuenta en **Usuarios**, con navegación por páginas. Se puede:
 - Habilitar una cuenta como personal y asignarla o retirarla de sucursales existentes.
 - Cambiar personal a cliente, previa confirmación: elimina sus asignaciones. No modifica administradores.
 
-Cada ajuste tiene un UUID. Antes del envío, la confirmación puede cancelarse para editar. Después de un resultado incierto, se conservan UUID y contenido en `sessionStorage`, por administrador y cuenta destinataria. Volver a seleccionar esa cuenta después de recargar permite confirmar/reintentar la misma operación sin duplicarla. Los datos no se pueden editar mientras esa operación siga pendiente. No borrar el almacenamiento ni duplicar la operación en otra pestaña para resolver una conexión interrumpida; el mecanismo actual se limita a esa pestaña y requiere revisión de coordinación entre pestañas antes de producción.
+Cada ajuste tiene un UUID compartido por administrador y cliente. Revisar guarda un borrador visible en sus otras pestañas; mientras no se intentó enviar puede cancelarse o volver a editar. Después del primer intento quedan fijos UUID, puntos y motivo hasta recuperar el resultado. Los pendientes se guardan en localStorage, se eliminan al resolver y no se mezclan entre cuentas; se migran los pendientes antiguos de sessionStorage cuando se selecciona al cliente. Puede recuperarse desde el formulario o desde Operaciones pendientes, con nombre/correo del destino y permisos actuales. Ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md), incluidos límites en equipos compartidos. Otro UUID representa otro ajuste deliberado.
 
 ## Sucursales
 
@@ -60,11 +60,11 @@ Cada ajuste tiene un UUID. Antes del envío, la confirmación puede cancelarse p
 
 La lista administrativa, el catálogo público y los datos de agenda/asignaciones se invalidan tras los cambios para consultar la API nuevamente. No se crean mesas ni horarios al crear una sucursal: hasta configurarlos no ofrecerá turnos. La interfaz usa los esquemas compartidos y no cambia las reglas del backend.
 
-Los teléfonos y coordenadas existentes pueden reemplazarse, pero la API actual no permite borrarlos mediante `null`; el formulario informa si se intenta vaciarlos. No hay eliminación permanente ni nombres únicos. Si se pierde la respuesta de un alta, se bloquea su reenvío y se pide cerrar y revisar la lista antes de crear otra; no hay idempotencia de altas en la API ni deduplicación por nombre. La edición usa PATCH sobre el mismo identificador. No se coordinan ediciones simultáneas de varios administradores ni se añade auditoría de esos cambios.
+Los teléfonos y coordenadas existentes pueden reemplazarse, pero la API actual no permite borrarlos mediante `null`; el formulario informa si se intenta vaciarlos. No hay eliminación permanente ni nombres únicos. Si se pierde la respuesta de un alta, se bloquea su reenvío y se pide cerrar y revisar la lista antes de crear otra; las altas ahora conservan Idempotency-Key y pueden recuperarse desde Operaciones pendientes sin duplicarse. No se deduplican operaciones distintas por nombre; ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). La edición usa PATCH sobre el mismo identificador. No se coordinan ediciones simultáneas de varios administradores ni se añade auditoría de esos cambios.
 
 ## Alcance pendiente
 
-Esta entrega cubre sucursales con imágenes, mesas, horarios, excepciones, bloqueos temporales, agenda, resultados, cancelaciones, usuarios, asignaciones y puntos. Queda la revisión de sesiones/almacenamiento y coordinación entre pestañas antes de producción. Tampoco hay búsqueda de usuarios en el servidor, creación pública de administradores, corrección de resultados terminales ni automatización de ausencias.
+Esta entrega cubre sucursales con imágenes, mesas, horarios, excepciones, bloqueos, agenda, resultados, cancelaciones, usuarios, asignaciones y puntos. La recuperación de altas/ajustes entre pestañas completa la etapa 6 en desarrollo local; siguen los controles de publicación de la etapa 7.
 
 ## Verificación
 

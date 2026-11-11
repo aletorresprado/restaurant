@@ -1,3 +1,4 @@
+import { WriteKey, WriteIdentity, WriteHeader } from '../common/write-operation';
 import { applyDecorators, BadRequestException, Body, CanActivate, Controller, Delete, ExecutionContext, Get, Injectable, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Role } from '@repo/shared-types';
@@ -36,24 +37,29 @@ export class OperationsController {
   constructor(private readonly operations: OperationsService) {}
   @Get('tables') @Pages()
   tables(@Param('branchId', ParseUUIDPipe) branchId: string, @Query(new ZodPipe(ListQuerySchema)) page: z.infer<typeof ListQuerySchema>) { return this.operations.tables(branchId, page); }
+  @Get('tables/:tableId')
+  table(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('tableId', ParseUUIDPipe) id: string) { return this.operations.findTable(branchId, id); }
   @Post('tables')
+  @WriteHeader()
   @ApiBody({ schema: { type: 'object', required: ['tableNumber', 'capacity'], properties: { tableNumber: { type: 'string', example: 'A-1' }, capacity: { type: 'integer', minimum: 1, maximum: 50 } } } })
-  createTable(@Param('branchId', ParseUUIDPipe) branchId: string, @Body(new ZodPipe(CreateRestaurantTableSchema.strict())) data: CreateRestaurantTableDto) { return this.operations.createTable(branchId, data); }
+  createTable(@Param('branchId', ParseUUIDPipe) branchId: string, @Body(new ZodPipe(CreateRestaurantTableSchema.strict())) data: CreateRestaurantTableDto, @WriteKey() operation?: WriteIdentity) { return this.operations.createTable(branchId, data, operation); }
   @Patch('tables/:tableId')
   @ApiBody({ schema: { type: 'object', properties: { capacity: { type: 'integer', minimum: 1, maximum: 50 }, tableStatus: { type: 'string', enum: ['ACTIVE', 'BLOCKED', 'OUT_OF_SERVICE'] } } } })
   updateTable(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('tableId', ParseUUIDPipe) tableId: string, @Body(new ZodPipe(TablePatchSchema)) data: UpdateRestaurantTableDto) { return this.operations.updateTable(branchId, tableId, data); }
   @Get('tables/:tableId/blocks') @Pages()
   blocks(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('tableId', ParseUUIDPipe) tableId: string, @Query(new ZodPipe(ListQuerySchema)) page: z.infer<typeof ListQuerySchema>) { return this.operations.blocks(branchId, tableId, page); }
   @Post('tables/:tableId/blocks')
+  @WriteHeader()
   @ApiBody({ schema: { type: 'object', required: ['startAt', 'endAt', 'reason'], properties: { startAt: { type: 'string', format: 'date-time', example: '2026-11-02T20:00:00-03:00' }, endAt: { type: 'string', format: 'date-time', example: '2026-11-02T22:00:00-03:00' }, reason: { type: 'string', example: 'Mantenimiento' } } } })
-  block(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('tableId', ParseUUIDPipe) tableId: string, @Body(new ZodPipe(CreateTableBlockSchema.innerType().strict().pipe(CreateTableBlockSchema))) data: CreateTableBlockDto) { return this.operations.block(branchId, tableId, data); }
+  block(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('tableId', ParseUUIDPipe) tableId: string, @Body(new ZodPipe(CreateTableBlockSchema.innerType().strict().pipe(CreateTableBlockSchema))) data: CreateTableBlockDto, @WriteKey() operation?: WriteIdentity) { return this.operations.block(branchId, tableId, data, operation); }
   @Delete('tables/:tableId/blocks/:blockId')
   unblock(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('tableId', ParseUUIDPipe) tableId: string, @Param('blockId', ParseUUIDPipe) blockId: string) { return this.operations.unblock(branchId, tableId, blockId); }
   @Get('schedules')
   schedules(@Param('branchId', ParseUUIDPipe) branchId: string) { return this.operations.schedules(branchId); }
   @Post('schedules')
+  @WriteHeader()
   @ApiBody({ schema: { type: 'object', required: ['dayOfWeek', 'openingTime', 'closingTime'], properties: scheduleProperties } })
-  createSchedule(@Param('branchId', ParseUUIDPipe) branchId: string, @Body(new ZodPipe(CreateBranchScheduleSchema.innerType().strict().pipe(CreateBranchScheduleSchema))) data: CreateBranchScheduleDto) { return this.operations.createSchedule(branchId, data); }
+  createSchedule(@Param('branchId', ParseUUIDPipe) branchId: string, @Body(new ZodPipe(CreateBranchScheduleSchema.innerType().strict().pipe(CreateBranchScheduleSchema))) data: CreateBranchScheduleDto, @WriteKey() operation?: WriteIdentity) { return this.operations.createSchedule(branchId, data, operation); }
   @Patch('schedules/:scheduleId')
   @ApiBody({ schema: { type: 'object', properties: { openingTime: times.openingTime, closingTime: times.closingTime, reservationIntervalMinutes: scheduleProperties.reservationIntervalMinutes, isActive: scheduleProperties.isActive } } })
   updateSchedule(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('scheduleId', ParseUUIDPipe) id: string, @Body(new ZodPipe(SchedulePatch)) data: UpdateBranchScheduleDto) { return this.operations.updateSchedule(branchId, id, data); }
@@ -62,8 +68,9 @@ export class OperationsController {
   @Get('schedule-exceptions') @Pages()
   exceptions(@Param('branchId', ParseUUIDPipe) branchId: string, @Query(new ZodPipe(ListQuerySchema)) page: z.infer<typeof ListQuerySchema>) { return this.operations.exceptions(branchId, page); }
   @Post('schedule-exceptions')
+  @WriteHeader()
   @ApiBody({ schema: { type: 'object', required: ['date'], properties: exceptionProperties } })
-  createException(@Param('branchId', ParseUUIDPipe) branchId: string, @Body(new ZodPipe(CreateBranchScheduleExceptionSchema.innerType().strict().pipe(CreateBranchScheduleExceptionSchema))) data: CreateBranchScheduleExceptionDto) { return this.operations.createException(branchId, data); }
+  createException(@Param('branchId', ParseUUIDPipe) branchId: string, @Body(new ZodPipe(CreateBranchScheduleExceptionSchema.innerType().strict().pipe(CreateBranchScheduleExceptionSchema))) data: CreateBranchScheduleExceptionDto, @WriteKey() operation?: WriteIdentity) { return this.operations.createException(branchId, data, operation); }
   @Patch('schedule-exceptions/:exceptionId')
   @ApiBody({ schema: { type: 'object', properties: { openingTime: times.openingTime, closingTime: times.closingTime, isClosed: exceptionProperties.isClosed, reason: exceptionProperties.reason } } })
   updateException(@Param('branchId', ParseUUIDPipe) branchId: string, @Param('exceptionId', ParseUUIDPipe) id: string, @Body(new ZodPipe(ExceptionPatch)) data: UpdateBranchScheduleExceptionDto) { return this.operations.updateException(branchId, id, data); }

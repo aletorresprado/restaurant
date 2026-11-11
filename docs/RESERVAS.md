@@ -10,6 +10,7 @@ Implementado el 28 de octubre de 2026. Prefijo común `/api/v1`. Requiere las mi
 
 ```json
 {
+  "operationId": "7e79ae10-e259-4778-b2f5-1c7d092c3017",
   "branchId": "UUID-DE-LA-SUCURSAL",
   "serviceDate": "2026-11-02",
   "startAt": "2026-11-02T20:00:00-03:00",
@@ -18,6 +19,7 @@ Implementado el 28 de octubre de 2026. Prefijo común `/api/v1`. Requiere las mi
 ```
 
 4. Enviar a `POST /reservations`. Confirmar ID, mesa asignada, estado CONFIRMED y evento RESERVATION_CREATED. Las fechas de ejemplo solo funcionan si son futuras y coinciden con el servicio configurado.
+   Generar un UUID nuevo para una operación nueva y conservarlo en todos sus reintentos. Repetir el mismo cuerpo y UUID devuelve la misma reserva con su estado actual (HTTP 201), sin duplicar eventos; cambiar datos devuelve 409. No reutilizar el UUID del ejemplo para reservas distintas. Sin `operationId`, permitido por compatibilidad, no hay protección contra reenvíos. Ver [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md).
 5. Consultar `GET /reservations` o `GET /reservations/:id` con el mismo usuario.
 6. Para cancelar, enviar `{}` o `{ "reason": "Cambio de planes" }` a `POST /reservations/:id/cancel`, con al menos 6 horas de anticipación.
 7. Como personal asignado, consultar `GET /staff/branches/:branchId/reservations?date=2026-11-02`. Para cancelación del restaurante, enviar `{ "reason": "Cierre extraordinario" }` a `POST /staff/branches/:branchId/reservations/:id/cancel` antes del inicio.

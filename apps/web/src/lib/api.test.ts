@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api, getSession, logoutSession, setSession } from './api';
-
+import {
+  api,
+  establishSession,
+  getSession,
+  getSessionTabId,
+  logoutSession,
+  setSession,
+} from './api';
 const user = {
   id: 'customer-1',
   firstName: 'Ana',
@@ -9,33 +15,32 @@ const user = {
   phone: null,
   role: 'CUSTOMER' as const,
 };
-const original = { user, accessToken: 'old', refreshToken: 'refresh-old' };
 const response = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-describe('authenticated API client', () => {
-  beforeEach(() => {
-    setSession(original);
+describe('cookie authenticated API client', () => {
+  beforeEach(async () => {
+    await establishSession({ user });
   });
   afterEach(() => {
     setSession(null);
     vi.unstubAllGlobals();
   });
-  it('rotates a refresh token only once for concurrent unauthorized requests', async () => {
-    let rotations = 0;
-    const fetcher = vi.fn(async (url: string, init: RequestInit) => {
-      if (url.endsWith('/auth/refresh')) {
-        rotations++;
-        await new Promise((resolve) => setTimeout(resolve, 15));
-        return response(200, { user, accessToken: 'new', refreshToken: 'refresh-new' });
-      }
-      return (init.headers as Record<string, string>).Authorization === 'Bearer old'
-        ? response(401, {})
-        : response(200, { success: true });
-    });
+  it('sends only a public tab identifier and same-origin cookies', async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(200, { success: true }));
     vi.stubGlobal('fetch', fetcher);
-    const results = await Promise.all([api('/one', {}, true), api('/two', {}, true)]);
-    expect(results).toEqual([{ success: true }, { success: true }]);
-    expect(rotations).toBe(1);
+    await api('/one', {}, true);
+    const options = fetcher.mock.calls[0][1] as RequestInit;
+    expect(options.headers).toMatchObject({ 'X-Web-Session': getSessionTabId() });
+    expect(new Headers(options.headers).has('Authorization')).toBe(false);
+    expect(options.credentials).toBe('same-origin');
+    expect(options.cache).toBe('no-store');
+  });
+  it('ends an expired cookie session without rotating tokens or replaying a request', async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(401, {}));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(api('/one', {}, true)).rejects.toMatchObject({ status: 401 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(getSession()).toBeNull();
   });
   it('does not repeat a reservation POST after a network error', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('connection lost'));
@@ -50,36 +55,28 @@ describe('authenticated API client', () => {
     vi.stubGlobal('fetch', fetcher);
     await expect(api('/reservations', { method: 'POST', body: '{}' }, true)).rejects.toMatchObject({
       status: 409,
-      message: 'Sin mesas',
     });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it('preserves the local session if the server cannot revoke it', async () => {
+  it('preserves the local session if revocation cannot reach the server', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     await expect(logoutSession()).rejects.toMatchObject({ status: 0 });
     expect(getSession()?.user.id).toBe(user.id);
   });
-  it('lets the browser provide the multipart boundary for authenticated uploads', async () => {
-    const fetcher = vi.fn().mockResolvedValue(response(200, { imageVersion: 'version' }));
+  it('lets the browser provide the multipart boundary', async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(200, {}));
     vi.stubGlobal('fetch', fetcher);
     const body = new FormData();
     body.append('file', new Blob(['bytes'], { type: 'image/jpeg' }), 'photo.jpg');
     await api('/admin/branches/id/image', { method: 'POST', body }, true);
     const options = fetcher.mock.calls[0][1] as RequestInit;
     expect(options.body).toBe(body);
-    expect(options.headers).toMatchObject({ Authorization: 'Bearer old' });
     expect(new Headers(options.headers).has('Content-Type')).toBe(false);
   });
-  it('preserves binary response decoding after refreshing an expired image request', async () => {
+  it('decodes authenticated binary responses', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        if (url.endsWith('/auth/refresh'))
-          return response(200, { user, accessToken: 'new', refreshToken: 'next' });
-        return (init.headers as Record<string, string>).Authorization === 'Bearer old'
-          ? response(401, {})
-          : new Response(new Blob(['photo'], { type: 'image/png' }));
-      }),
+      vi.fn().mockResolvedValue(new Response(new Blob(['photo'], { type: 'image/png' }))),
     );
     const blob = await api<Blob>('/admin/branches/id/image', {}, true, 'blob');
     expect(blob.type).toBe('image/png');
@@ -97,12 +94,12 @@ describe('authenticated API client', () => {
       ),
     );
     const pending = api('/auth/me', {}, true);
-    setSession({ ...original, user: { ...user, id: 'another-user' }, refreshToken: 'another' });
+    setSession({ user: { ...user, id: 'another-user' } });
     complete(response(200, user));
     await expect(pending).rejects.toMatchObject({ status: 401 });
     expect(getSession()?.user.id).toBe('another-user');
   });
-  it('treats an applied write as uncertain if the session changes before its response', async () => {
+  it('treats a successful write as uncertain after switching sessions', async () => {
     let complete!: (value: Response) => void;
     vi.stubGlobal(
       'fetch',
@@ -118,20 +115,22 @@ describe('authenticated API client', () => {
     complete(response(200, { id: 'created' }));
     await expect(pending).rejects.toMatchObject({ status: 0 });
   });
-  it('does not replay a request under a new login, even for the same user', async () => {
+  it('does not clear a new login when an old unauthorized response arrives', async () => {
     let complete!: (value: Response) => void;
-    const fetcher = vi.fn(
-      () =>
-        new Promise<Response>((resolve) => {
-          complete = resolve;
-        }),
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            complete = resolve;
+          }),
+      ),
     );
-    vi.stubGlobal('fetch', fetcher);
-    const pending = api('/reservations', { method: 'POST', body: '{}' }, true);
-    setSession({ ...original, accessToken: 'other-login', refreshToken: 'other-refresh' });
+    const pending = api('/one', {}, true);
+    setSession({ user });
     complete(response(401, {}));
     await expect(pending).rejects.toMatchObject({ status: 401 });
-    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(getSession()?.user.id).toBe(user.id);
   });
   it('does not clear a new login when a previous logout finishes', async () => {
     let complete!: (value: Response) => void;
@@ -145,36 +144,9 @@ describe('authenticated API client', () => {
       ),
     );
     const pending = logoutSession();
-    setSession({ ...original, accessToken: 'other-login', refreshToken: 'other-refresh' });
+    setSession({ user: { ...user, id: 'new-login' } });
     complete(response(200, { success: true }));
     await pending;
-    expect(getSession()?.accessToken).toBe('other-login');
-  });
-  it('keeps renewals separate when a previous login still has a refresh in flight', async () => {
-    let completeOldRefresh!: (value: Response) => void;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        if (url.endsWith('/auth/refresh')) {
-          const token = JSON.parse(init.body as string).refreshToken;
-          if (token === 'refresh-old')
-            return new Promise<Response>((resolve) => {
-              completeOldRefresh = resolve;
-            });
-          return response(200, { user, accessToken: 'new-valid', refreshToken: 'new-rotated' });
-        }
-        return (init.headers as Record<string, string>).Authorization === 'Bearer new-valid'
-          ? response(200, { success: true })
-          : response(401, {});
-      }),
-    );
-    const oldRequest = api('/old', {}, true);
-    const oldRejection = expect(oldRequest).rejects.toMatchObject({ status: 401 });
-    await vi.waitFor(() => expect(completeOldRefresh).toBeTypeOf('function'));
-    setSession({ ...original, accessToken: 'new-expired', refreshToken: 'new-login' });
-    await expect(api('/new', {}, true)).resolves.toEqual({ success: true });
-    completeOldRefresh(response(401, {}));
-    await oldRejection;
-    expect(getSession()?.accessToken).toBe('new-valid');
+    expect(getSession()?.user.id).toBe('new-login');
   });
 });

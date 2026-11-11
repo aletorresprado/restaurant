@@ -1,7 +1,13 @@
+import {
+  managedPost,
+  prepareManagement,
+  clearManagement,
+  useManagementIntents,
+} from '@/lib/management-intent';
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, post, ApiError, errorMessage, type Page } from '@/lib/api';
+import { api, errorMessage, type Page } from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { formatDateTime } from '@/lib/format';
 import { Button, Container, Field, Notice, inputClass } from '@/components/kit';
@@ -326,20 +332,39 @@ function UserLoyalty({ userId }: { userId: string }) {
     [error, setError] = useState(''),
     [success, setSuccess] = useState('');
   const storageKey = `app-resto-adjustment:${user?.id}:${userId}`;
-  const [intent, setIntent] = useState<Adjustment | null>(() => {
-    try {
-      const value = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
-      return value &&
-        typeof value.operationId === 'string' &&
-        typeof value.points === 'number' &&
-        typeof value.reason === 'string'
-        ? value
-        : null;
-    } catch {
-      return null;
-    }
-  });
   const root = `/admin/users/${userId}/loyalty`;
+  const path = `${root}/adjustments`;
+  const { records, error: storageError } = useManagementIntents(user?.id);
+  const record = records.find((value) => value.path === path);
+  const intent = record
+    ? ({
+        ...record.body,
+        operationId: record.operationId,
+        attempted: record.attempted,
+      } as Adjustment)
+    : null;
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const legacy = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
+      if (
+        legacy &&
+        typeof legacy.operationId === 'string' &&
+        typeof legacy.points === 'number' &&
+        typeof legacy.reason === 'string'
+      )
+        void prepareManagement(
+          user.id,
+          path,
+          { operationId: legacy.operationId, points: legacy.points, reason: legacy.reason },
+          !!legacy.attempted,
+        )
+          .then(() => sessionStorage.removeItem(storageKey))
+          .catch((error) => setError(errorMessage(error)));
+    } catch (error) {
+      setError(errorMessage(error));
+    }
+  }, [user?.id, path, storageKey]);
   const summary = useQuery({
     queryKey: ['management', user?.id, 'loyalty', userId],
     queryFn: () => api<{ balance: number; tier: string }>(root, {}, true),
@@ -356,19 +381,15 @@ function UserLoyalty({ userId }: { userId: string }) {
     setError('');
     setSuccess('');
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify({ ...intent, attempted: true }));
-      setIntent({ ...intent, attempted: true });
       const { operationId, points: requestedPoints, reason: adjustmentReason } = intent;
-      const movement = await post<Movement>(
+      const movement = await managedPost<Movement>(
         `${root}/adjustments`,
         { operationId, points: requestedPoints, reason: adjustmentReason },
-        true,
+        user?.id,
       );
       setSuccess(
         `Ajuste registrado: ${movement.points > 0 ? '+' : ''}${movement.points} puntos. Saldo resultante: ${movement.balanceAfter}.`,
       );
-      sessionStorage.removeItem(storageKey);
-      setIntent(null);
       setPoints('');
       setReason('');
       setPage(1);
@@ -376,10 +397,6 @@ function UserLoyalty({ userId }: { userId: string }) {
       setError(errorMessage(err));
       // A definite validation failure cannot have applied this operation. Other
       // failures retain the same UUID/body across retries, navigation and reload.
-      if (err instanceof ApiError && err.status === 400) {
-        sessionStorage.removeItem(storageKey);
-        setIntent(null);
-      }
     } finally {
       await client.invalidateQueries({ queryKey: ['management'] });
       await client.invalidateQueries({ queryKey: ['loyalty'] });
@@ -394,6 +411,7 @@ function UserLoyalty({ userId }: { userId: string }) {
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
       <h3 className="text-xl font-semibold">Puntos y movimientos</h3>
+      {storageError && <Notice tone="error">{storageError}</Notice>}
       {summary.isPending ? (
         <p>Cargando saldo…</p>
       ) : summary.error ? (
@@ -436,7 +454,8 @@ function UserLoyalty({ userId }: { userId: string }) {
           <>
             <Notice title="Ajuste pendiente de confirmación">
               Revisá los datos y confirmá. Si hubo un error de conexión, reintentar consulta o
-              aplica esta misma operación sin duplicar puntos.
+              aplica esta misma operación sin duplicar puntos. El pendiente se comparte entre tus
+              pestañas y se conserva en este equipo hasta conocer el resultado.
             </Notice>
             <Button loading={busy} onClick={() => void send()}>
               Confirmar ajuste
@@ -446,8 +465,10 @@ function UserLoyalty({ userId }: { userId: string }) {
                 variant="ghost"
                 disabled={busy}
                 onClick={() => {
-                  sessionStorage.removeItem(storageKey);
-                  setIntent(null);
+                  if (user && record)
+                    void clearManagement(user.id, record, true).catch((error) =>
+                      setError(errorMessage(error)),
+                    );
                 }}
               >
                 Volver a editar
@@ -456,23 +477,20 @@ function UserLoyalty({ userId }: { userId: string }) {
           </>
         ) : (
           <Button
-            disabled={!valid || !!summary.error || summary.isPending}
+            disabled={!valid || !!storageError || !!summary.error || summary.isPending}
             onClick={() => {
               const value = {
                 operationId: crypto.randomUUID(),
                 points: Number(points),
                 reason: reason.trim(),
               };
-              try {
-                sessionStorage.setItem(storageKey, JSON.stringify(value));
-                setIntent(value);
-                setError('');
-                setSuccess('');
-              } catch {
-                setError(
-                  'El navegador no permite guardar la operación. Habilitá el almacenamiento de la sesión para realizar ajustes con seguridad.',
-                );
-              }
+              if (!user) return;
+              void prepareManagement(user.id, path, value, false)
+                .then(() => {
+                  setError('');
+                  setSuccess('');
+                })
+                .catch((error) => setError(errorMessage(error)));
             }}
           >
             Revisar ajuste

@@ -1,23 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { clearResolvedReservation } from './reservation-intent';
 import {
   api,
-  establishSession,
+  signInSession,
   getSession,
   getSessionIdentity,
+  getSessionTabId,
   logoutSession,
   onSessionChange,
-  post,
   restoreSession,
   setSession,
   type Branch,
   type Page,
-  type Session,
   type User,
 } from './api';
 
 const SelectionSchema = z.object({
+  operationId: z.string().uuid().optional(),
   branchId: z.string().uuid(),
   serviceDate: z.string().date(),
   startAt: z.string().datetime({ offset: true }),
@@ -71,25 +72,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .then(async (message) => {
         if (cancelled) return;
         if (message) setAuthError(message);
-        if (!getSession()) return;
-        const restoringUserId = getSession()?.user.id;
+        if (!getSessionTabId()) return;
         const restoringIdentity = getSessionIdentity();
         await api<User>('/auth/me', {}, true)
           .then((value) => {
-            const session = getSession();
-            if (
-              getSessionIdentity() === restoringIdentity &&
-              session &&
-              session.user.id === restoringUserId &&
-              value.id === restoringUserId
-            )
-              setSession({ ...session, user: value });
+            if (getSessionIdentity() === restoringIdentity) {
+              void clearResolvedReservation(value.id);
+              setSession({ user: value }, true);
+            }
           })
           .catch((error) => {
-            if (
-              getSessionIdentity() === restoringIdentity &&
-              getSession()?.user.id === restoringUserId
-            )
+            if (getSessionIdentity() === restoringIdentity)
               setAuthError(
                 error instanceof Error ? error.message : 'No se pudo verificar tu sesión.',
               );
@@ -131,14 +124,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   const signIn = async (mode: 'login' | 'register', body: unknown) => {
-    const session = await post<Session>(`/auth/${mode}`, body);
+    await signInSession(mode, body);
+    if (getSession()) await clearResolvedReservation(getSession()!.user.id);
     client.clear();
-    await establishSession(session);
     setAuthError('');
   };
   const signOut = async () => {
     await logoutSession();
     client.clear();
+    setPending(null);
     setAuthError('');
   };
   return (

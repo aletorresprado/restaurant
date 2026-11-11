@@ -6,6 +6,7 @@ import { BranchesService } from '../branches/branches.service';
 import { UserRequest } from '../auth/access.guard';
 import { isoDay, nextDate, timezone, weeklyOverlap, windowFor } from './time';
 import { occupyingStatuses } from '../reservations/rules';
+import { writeOperation, WriteIdentity } from '../common/write-operation';
 
 type Tx = Prisma.TransactionClient;
 type Page = { page: number; limit: number };
@@ -34,7 +35,12 @@ export class OperationsService {
     ]);
     return { data, meta: { ...page, total, totalPages: Math.ceil(total / page.limit) } };
   }
-  createTable(branchId: string, data: CreateRestaurantTableDto) { return this.mapped(() => this.db.restaurantTable.create({ data: { branchId, ...data } })); }
+  findTable(branchId: string, id: string) { return this.table(this.db, branchId, id); }
+  createTable(branchId: string, data: CreateRestaurantTableDto, operation?: WriteIdentity) {
+    return this.mapped(() => writeOperation(this.db, operation, 'TABLE', branchId.toLowerCase(), data,
+      tx => tx.restaurantTable.create({ data: { branchId, ...data } }),
+      (tx, id) => tx.restaurantTable.findFirst({ where: { id, branchId } })));
+  }
   async updateTable(branchId: string, id: string, data: UpdateRestaurantTableDto) {
     return this.db.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${branchId}::uuid FOR UPDATE`;
@@ -51,8 +57,8 @@ export class OperationsService {
     ]);
     return { data, meta: { ...page, total, totalPages: Math.ceil(total / page.limit) } };
   }
-  async block(branchId: string, tableId: string, data: CreateTableBlockDto) {
-    return this.db.$transaction(async tx => {
+  async block(branchId: string, tableId: string, data: CreateTableBlockDto, operation?: WriteIdentity) {
+    return writeOperation(this.db, operation, 'BLOCK', `${branchId.toLowerCase()}:${tableId.toLowerCase()}`, data, async tx => {
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${branchId}::uuid FOR UPDATE`;
       await tx.$queryRaw`SELECT id FROM "RestaurantTable" WHERE id = ${tableId}::uuid FOR UPDATE`;
       await this.table(tx, branchId, tableId);
@@ -60,7 +66,7 @@ export class OperationsService {
       if (await tx.reservation.findFirst({ where: { tableId, status: { in: [...occupyingStatuses] }, startAt: { lt: endAt }, endAt: { gt: startAt } } })) throw new ConflictException('El bloqueo entra en conflicto con una reserva vigente');
       if (await tx.tableBlock.findFirst({ where: { tableId, startAt: { lt: endAt }, endAt: { gt: startAt } } })) throw new ConflictException('El bloqueo se superpone con otro de la mesa');
       return tx.tableBlock.create({ data: { tableId, startAt, endAt, reason: data.reason } });
-    });
+    }, (tx, id) => tx.tableBlock.findFirst({ where: { id, tableId } }));
   }
   async unblock(branchId: string, tableId: string, id: string) {
     await this.table(this.db, branchId, tableId);
@@ -95,8 +101,9 @@ export class OperationsService {
       if (a.window && b.window && a.window.endAt > b.window.startAt) throw new ConflictException('La excepción se superpone con el servicio del día contiguo');
     }
   }
-  private scheduleTransaction<T>(branchId: string, action: (tx: Tx) => Promise<T>) {
-    return this.mapped(() => this.db.$transaction(async tx => {
+  private scheduleTransaction<T>(branchId: string, action: (tx: Tx) => Promise<T>, operation?: WriteIdentity,
+    kind = '', payload?: unknown, recover?: (tx: Tx, id: string) => Promise<T | null>) {
+    return this.mapped(() => writeOperation(this.db, operation, kind, branchId.toLowerCase(), payload, async tx => {
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${branchId}::uuid FOR UPDATE`;
       const result = await action(tx);
       await this.validateHours(tx, branchId);
@@ -106,9 +113,12 @@ export class OperationsService {
         if (!hours.window || reservation.startAt < hours.window.startAt || reservation.endAt > hours.window.endAt) throw new ConflictException('El cambio deja una reserva confirmada fuera del horario');
       }
       return result;
-    }, { timeout: 15000 }));
+    }, recover));
   }
-  createSchedule(branchId: string, data: CreateBranchScheduleDto) { return this.scheduleTransaction(branchId, tx => tx.branchSchedule.create({ data: { branchId, ...data } })); }
+  createSchedule(branchId: string, data: CreateBranchScheduleDto, operation?: WriteIdentity) {
+    return this.scheduleTransaction(branchId, tx => tx.branchSchedule.create({ data: { branchId, ...data } }),
+      operation, 'SCHEDULE', data, (tx, id) => tx.branchSchedule.findFirst({ where: { id, branchId } }));
+  }
   updateSchedule(branchId: string, id: string, data: UpdateBranchScheduleDto) {
     return this.scheduleTransaction(branchId, async tx => {
       const existing = await tx.branchSchedule.findFirst({ where: { id, branchId } });
@@ -124,8 +134,9 @@ export class OperationsService {
       return { success: true };
     });
   }
-  createException(branchId: string, data: CreateBranchScheduleExceptionDto) {
-    return this.scheduleTransaction(branchId, tx => tx.branchScheduleException.create({ data: { branchId, ...data, ...(data.isClosed ? { openingTime: null, closingTime: null } : {}) } }));
+  createException(branchId: string, data: CreateBranchScheduleExceptionDto, operation?: WriteIdentity) {
+    return this.scheduleTransaction(branchId, tx => tx.branchScheduleException.create({ data: { branchId, ...data, ...(data.isClosed ? { openingTime: null, closingTime: null } : {}) } }),
+      operation, 'EXCEPTION', data, (tx, id) => tx.branchScheduleException.findFirst({ where: { id, branchId } }));
   }
   updateException(branchId: string, id: string, data: UpdateBranchScheduleExceptionDto) {
     return this.scheduleTransaction(branchId, async tx => {

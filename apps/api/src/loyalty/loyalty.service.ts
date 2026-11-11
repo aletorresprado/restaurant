@@ -10,9 +10,14 @@ export class LoyaltyService {
   // Every writer locks the owner, including attendance on different branches.
   async apply(tx: Prisma.TransactionClient, data: { userId: string; actorId: string; sourceKey: string; kind: string; requestedPoints: number; reason?: string; reservationId?: string; rating?: number }) {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${data.userId}::uuid FOR UPDATE`;
-    const previous = await tx.loyaltyMovement.findUnique({ where: { sourceKey: data.sourceKey } });
+    const previous = data.kind === 'ADJUSTMENT'
+      ? await tx.loyaltyMovement.findFirst({ where: { userId: data.userId, sourceKey: { equals: data.sourceKey, mode: 'insensitive' } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] })
+      : await tx.loyaltyMovement.findUnique({ where: { sourceKey: data.sourceKey } });
     if (previous) {
-      if (previous.userId !== data.userId || previous.kind !== data.kind || previous.requestedPoints !== data.requestedPoints || previous.reason !== (data.reason ?? null) || previous.rating !== (data.rating ?? null)) throw new ConflictException('La clave de operación ya se usó con otros datos');
+      if (data.kind === 'ADJUSTMENT' && previous.actorId !== data.actorId)
+        throw new ConflictException({ message: 'El ajuste pertenece a otra cuenta administradora', code: 'OPERATION_MISMATCH' });
+      if (previous.userId !== data.userId || previous.kind !== data.kind || previous.requestedPoints !== data.requestedPoints || previous.reason !== (data.reason ?? null) || previous.rating !== (data.rating ?? null))
+        throw new ConflictException({ message: 'La clave de operación ya se usó con otros datos', ...(data.kind === 'ADJUSTMENT' ? { code: 'OPERATION_MISMATCH' } : {}) });
       return previous;
     }
     const user = await tx.user.findUnique({ where: { id: data.userId } });
@@ -55,6 +60,6 @@ export class LoyaltyService {
   }
 
   adjust(userId: string, actorId: string, data: { operationId: string; points: number; reason: string }) {
-    return this.db.$transaction(tx => this.apply(tx, { userId, actorId, sourceKey: `adjustment:${userId}:${data.operationId}`, kind: 'ADJUSTMENT', requestedPoints: data.points, reason: data.reason }));
+    return this.db.$transaction(tx => this.apply(tx, { userId, actorId, sourceKey: `adjustment:${userId}:${data.operationId.toLowerCase()}`, kind: 'ADJUSTMENT', requestedPoints: data.points, reason: data.reason }));
   }
 }
