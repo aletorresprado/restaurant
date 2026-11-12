@@ -9,7 +9,8 @@
     "preview": "vite preview --host 127.0.0.1 --port 5173 --strictPort",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:security": "playwright test --config playwright.security.config.ts"
   },
   "dependencies": {
     "@repo/config": "workspace:*",

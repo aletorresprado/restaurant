@@ -26,7 +26,13 @@ async function main() {
     const port = socket.address().port;
     await new Promise(resolve => socket.close(resolve));
     child = spawn(process.execPath, ['dist/main.js'], {
-      cwd: process.cwd(), env: { ...process.env, PORT: String(port) }, stdio: 'ignore', windowsHide: true,
+      // This suite exercises business flows in bulk from one address. Abuse limits have dedicated HTTP tests.
+      cwd: process.cwd(), env: { ...process.env, PORT: String(port), RATE_LIMIT_LOGIN: '10000',
+        RATE_LIMIT_REGISTER: '10000', RATE_LIMIT_REFRESH: '10000', RATE_LIMIT_WRITE: '10000', RATE_LIMIT_READ: '10000',
+        LOGIN_ACCOUNT_FAILURES: '5', LOGIN_ACCOUNT_PAUSE_SECONDS: '60',
+        RATE_LIMIT_ACCOUNT_REQUEST: '10000', RATE_LIMIT_ACCOUNT_CONFIRM: '10000',
+        MAIL_MODE: 'file', PUBLIC_WEB_URL: 'http://127.0.0.1:5173', MAIL_OUTBOX_DIR: '.local/integration-mail' },
+      stdio: 'ignore', windowsHide: true,
     });
     const base = `http://127.0.0.1:${port}/api/v1`;
     let ready = false;
@@ -130,6 +136,8 @@ async function main() {
     await require('./reservations.integration.cjs')({ api, db, branchId, otherBranchId: otherBranch.body.id, adminToken, staffToken: customerToken });
     await require('./reservation-operations.integration.cjs')({ api, db });
     await require('./browser-sessions.integration.cjs')({ base, db });
+    await require('./account-login-limit.integration.cjs')({ base, db });
+    await require('./account-actions.integration.cjs')({ base, db });
     await require('./management-operations.integration.cjs')({ base, db });
     await require('./branch-images.integration.cjs')({ api, db, base, adminToken, staffToken: customerToken });
     assert.equal((await api('PATCH', `admin/branches/${branchId}`, { name: 'Forbidden change' }, customerToken)).status, 403);

@@ -10,8 +10,9 @@ async function resetLocalPassword(db, email, password) {
     const users = await tx.$queryRaw`SELECT id FROM "User" WHERE email = ${input.email.trim().toLowerCase()} FOR UPDATE`;
     if (users.length !== 1) throw new Error('No existe una cuenta con ese correo.');
     const userId = users[0].id;
-    await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+    await tx.user.update({ where: { id: userId }, data: { passwordHash, authVersion: { increment: 1 } } });
     await tx.session.deleteMany({ where: { userId } });
+    await tx.accountActionToken.deleteMany({ where: { userId } });
   });
 }
 
@@ -27,7 +28,7 @@ async function main() {
   try {
     await resetLocalPassword(db, process.env.LOCAL_RESET_EMAIL, process.env.LOCAL_RESET_PASSWORD);
     console.log('Contrasena actualizada. Reservas, puntos y rol conservados. Sesiones de renovacion eliminadas.');
-    console.log('Los access tokens emitidos siguen vigentes hasta su vencimiento. Volve a iniciar sesion.');
+    console.log('Las sesiones y access tokens anteriores fueron invalidados. Volve a iniciar sesion.');
   } finally { await db.$disconnect(); }
 }
 

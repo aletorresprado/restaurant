@@ -7,6 +7,7 @@ export type User = {
   email: string;
   phone: string | null;
   role: 'CUSTOMER' | 'STAFF' | 'ADMIN';
+  emailVerifiedAt?: string | null;
 };
 export type Session = { user: User };
 export type Branch = {

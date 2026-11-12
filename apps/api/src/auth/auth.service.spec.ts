@@ -2,6 +2,8 @@ import { AuthService } from './auth.service';
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { UnauthorizedException } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { AccountLoginLimit } from './account-login-limit';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService sessions', () => {
   const user = { id: 'user-1', email: 'customer@example.com', firstName: 'Ana', lastName: 'Perez', phone: null, role: 'CUSTOMER', isActive: true, passwordHash: 'private' };
@@ -10,8 +12,11 @@ describe('AuthService sessions', () => {
   beforeEach(() => {
     db = { session: { findUnique: jest.fn(), deleteMany: jest.fn(), create: jest.fn() }, user: { findUnique: jest.fn() } };
     db.$transaction = (fn: any) => fn(db);
+    db.$queryRaw = jest.fn<() => Promise<unknown[]>>().mockResolvedValue([]);
+    db.user.findUnique.mockResolvedValue(user);
     service = new AuthService(db, { signAsync: jest.fn<() => Promise<string>>().mockResolvedValue('access-token') } as any,
-      { getOrThrow: jest.fn().mockReturnValue('7d') } as any);
+      { getOrThrow: jest.fn().mockReturnValue('7d') } as any, new AccountLoginLimit(new ConfigService()),
+      { request: async () => ({}) } as any);
   });
 
   it('rotates refresh tokens and stores only their digest', async () => {
@@ -48,5 +53,11 @@ describe('AuthService sessions', () => {
     expect(db.session.deleteMany).toHaveBeenCalledWith({ where: {
       refreshTokenHash: createHash('sha256').update('token').digest('hex'),
     } });
+  });
+  it('does not issue credentials if a password reset wins before session creation', async () => {
+    db.session.findUnique.mockResolvedValue({ id: 'old-session', user: { ...user, authVersion: 0 }, expiresAt: new Date(Date.now() + 60000) });
+    db.user.findUnique.mockResolvedValue({ ...user, authVersion: 1 });
+    await expect(service.refresh('old-token')).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(db.session.create).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['security.spec.ts', 'account-login-limit.spec.ts', 'account-actions.spec.ts'], // Isolated production-preview tests.
   timeout: 60000,
   workers: 1,
   retries: 0,

@@ -12,11 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdministracionRouteImport } from './routes/administracion'
 import { Route as ConfirmarRouteImport } from './routes/confirmar'
+import { Route as CorreoRouteImport } from './routes/correo'
 import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as MesasRouteImport } from './routes/mesas'
 import { Route as PersonalRouteImport } from './routes/personal'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as ReservarRouteImport } from './routes/reservar'
+import { Route as RestablecerRouteImport } from './routes/restablecer'
+import { Route as VerificarCorreoRouteImport } from './routes/verificar-correo'
 import { Route as ConfirmadaIdRouteImport } from './routes/confirmada.$id'
 import { Route as MisReservasIndexRouteImport } from './routes/mis-reservas.index'
 import { Route as MisReservasIdRouteImport } from './routes/mis-reservas.$id'
@@ -34,6 +38,11 @@ const AdministracionRoute = AdministracionRouteImport.update({
 const ConfirmarRoute = ConfirmarRouteImport.update({
   id: '/confirmar',
   path: '/confirmar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorreoRoute = CorreoRouteImport.update({
+  id: '/correo',
+  path: '/correo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HorariosRoute = HorariosRouteImport.update({
@@ -56,9 +65,24 @@ const PersonalRoute = PersonalRouteImport.update({
   path: '/personal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReservarRoute = ReservarRouteImport.update({
   id: '/reservar',
   path: '/reservar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RestablecerRoute = RestablecerRouteImport.update({
+  id: '/restablecer',
+  path: '/restablecer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerificarCorreoRoute = VerificarCorreoRouteImport.update({
+  id: '/verificar-correo',
+  path: '/verificar-correo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfirmadaIdRoute = ConfirmadaIdRouteImport.update({
@@ -81,11 +105,15 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/administracion': typeof AdministracionRoute
   '/confirmar': typeof ConfirmarRoute
+  '/correo': typeof CorreoRoute
   '/horarios': typeof HorariosRoute
   '/ingresar': typeof IngresarRoute
   '/mesas': typeof MesasRoute
   '/personal': typeof PersonalRoute
+  '/recuperar': typeof RecuperarRoute
   '/reservar': typeof ReservarRoute
+  '/restablecer': typeof RestablecerRoute
+  '/verificar-correo': typeof VerificarCorreoRoute
   '/confirmada/$id': typeof ConfirmadaIdRoute
   '/mis-reservas/$id': typeof MisReservasIdRoute
   '/mis-reservas/': typeof MisReservasIndexRoute
@@ -94,11 +122,15 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/administracion': typeof AdministracionRoute
   '/confirmar': typeof ConfirmarRoute
+  '/correo': typeof CorreoRoute
   '/horarios': typeof HorariosRoute
   '/ingresar': typeof IngresarRoute
   '/mesas': typeof MesasRoute
   '/personal': typeof PersonalRoute
+  '/recuperar': typeof RecuperarRoute
   '/reservar': typeof ReservarRoute
+  '/restablecer': typeof RestablecerRoute
+  '/verificar-correo': typeof VerificarCorreoRoute
   '/confirmada/$id': typeof ConfirmadaIdRoute
   '/mis-reservas/$id': typeof MisReservasIdRoute
   '/mis-reservas': typeof MisReservasIndexRoute
@@ -108,11 +140,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/administracion': typeof AdministracionRoute
   '/confirmar': typeof ConfirmarRoute
+  '/correo': typeof CorreoRoute
   '/horarios': typeof HorariosRoute
   '/ingresar': typeof IngresarRoute
   '/mesas': typeof MesasRoute
   '/personal': typeof PersonalRoute
+  '/recuperar': typeof RecuperarRoute
   '/reservar': typeof ReservarRoute
+  '/restablecer': typeof RestablecerRoute
+  '/verificar-correo': typeof VerificarCorreoRoute
   '/confirmada/$id': typeof ConfirmadaIdRoute
   '/mis-reservas/$id': typeof MisReservasIdRoute
   '/mis-reservas/': typeof MisReservasIndexRoute
@@ -123,11 +159,15 @@ export interface FileRouteTypes {
     | '/'
     | '/administracion'
     | '/confirmar'
+    | '/correo'
     | '/horarios'
     | '/ingresar'
     | '/mesas'
     | '/personal'
+    | '/recuperar'
     | '/reservar'
+    | '/restablecer'
+    | '/verificar-correo'
     | '/confirmada/$id'
     | '/mis-reservas/$id'
     | '/mis-reservas/'
@@ -136,11 +176,15 @@ export interface FileRouteTypes {
     | '/'
     | '/administracion'
     | '/confirmar'
+    | '/correo'
     | '/horarios'
     | '/ingresar'
     | '/mesas'
     | '/personal'
+    | '/recuperar'
     | '/reservar'
+    | '/restablecer'
+    | '/verificar-correo'
     | '/confirmada/$id'
     | '/mis-reservas/$id'
     | '/mis-reservas'
@@ -149,11 +193,15 @@ export interface FileRouteTypes {
     | '/'
     | '/administracion'
     | '/confirmar'
+    | '/correo'
     | '/horarios'
     | '/ingresar'
     | '/mesas'
     | '/personal'
+    | '/recuperar'
     | '/reservar'
+    | '/restablecer'
+    | '/verificar-correo'
     | '/confirmada/$id'
     | '/mis-reservas/$id'
     | '/mis-reservas/'
@@ -163,11 +211,15 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdministracionRoute: typeof AdministracionRoute
   ConfirmarRoute: typeof ConfirmarRoute
+  CorreoRoute: typeof CorreoRoute
   HorariosRoute: typeof HorariosRoute
   IngresarRoute: typeof IngresarRoute
   MesasRoute: typeof MesasRoute
   PersonalRoute: typeof PersonalRoute
+  RecuperarRoute: typeof RecuperarRoute
   ReservarRoute: typeof ReservarRoute
+  RestablecerRoute: typeof RestablecerRoute
+  VerificarCorreoRoute: typeof VerificarCorreoRoute
   ConfirmadaIdRoute: typeof ConfirmadaIdRoute
   MisReservasIdRoute: typeof MisReservasIdRoute
   MisReservasIndexRoute: typeof MisReservasIndexRoute
@@ -194,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/confirmar'
       fullPath: '/confirmar'
       preLoaderRoute: typeof ConfirmarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/correo': {
+      id: '/correo'
+      path: '/correo'
+      fullPath: '/correo'
+      preLoaderRoute: typeof CorreoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/horarios': {
@@ -224,11 +283,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PersonalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reservar': {
       id: '/reservar'
       path: '/reservar'
       fullPath: '/reservar'
       preLoaderRoute: typeof ReservarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restablecer': {
+      id: '/restablecer'
+      path: '/restablecer'
+      fullPath: '/restablecer'
+      preLoaderRoute: typeof RestablecerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verificar-correo': {
+      id: '/verificar-correo'
+      path: '/verificar-correo'
+      fullPath: '/verificar-correo'
+      preLoaderRoute: typeof VerificarCorreoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/confirmada/$id': {
@@ -259,11 +339,15 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdministracionRoute: AdministracionRoute,
   ConfirmarRoute: ConfirmarRoute,
+  CorreoRoute: CorreoRoute,
   HorariosRoute: HorariosRoute,
   IngresarRoute: IngresarRoute,
   MesasRoute: MesasRoute,
   PersonalRoute: PersonalRoute,
+  RecuperarRoute: RecuperarRoute,
   ReservarRoute: ReservarRoute,
+  RestablecerRoute: RestablecerRoute,
+  VerificarCorreoRoute: VerificarCorreoRoute,
   ConfirmadaIdRoute: ConfirmadaIdRoute,
   MisReservasIdRoute: MisReservasIdRoute,
   MisReservasIndexRoute: MisReservasIndexRoute,

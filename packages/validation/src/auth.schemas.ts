@@ -44,3 +44,13 @@ export type RegisterDto = z.infer<typeof RegisterSchema>;
 export type LoginDto = z.infer<typeof LoginSchema>;
 export type RefreshTokenDto = z.infer<typeof RefreshTokenSchema>;
 export type ChangePasswordDto = z.infer<typeof ChangePasswordSchema>;
+
+export const AccountEmailSchema = RegisterSchema.pick({ email: true });
+export const AccountTokenSchema = z.object({ token: z.string().regex(/^[a-f0-9]{64}$/) });
+export const ResetPasswordSchema = AccountTokenSchema.extend({
+  password: RegisterSchema.shape.password,
+  confirmPassword: z.string(),
+}).refine(value => value.password === value.confirmPassword, {
+  message: 'Las contraseñas no coinciden', path: ['confirmPassword'],
+});
+export type ResetPasswordDto = z.infer<typeof ResetPasswordSchema>;

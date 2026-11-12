@@ -123,6 +123,20 @@ describe('recoverable management writes', () => {
     await expect(managedPost(path, body)).rejects.toMatchObject({ status: 400 });
     expect(values.size).toBe(0);
   });
+  it('retains the original operation on 429 without replaying automatically', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(response(429, {
+      code: 'RATE_LIMITED', message: 'Esperá 60 segundos.',
+    })).mockResolvedValueOnce(response(201, { id: 'created' }));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(managedPost(path, body)).rejects.toMatchObject({ status: 429 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(values.size).toBe(1);
+    await managedPost(path, body);
+    expect(fetcher.mock.calls[0][1].body).toBe(fetcher.mock.calls[1][1].body);
+    expect(new Headers(fetcher.mock.calls[0][1].headers).get('Idempotency-Key'))
+      .toBe(new Headers(fetcher.mock.calls[1][1].headers).get('Idempotency-Key'));
+    expect(values.size).toBe(0);
+  });
   it('does not send a prepared write under a different login', async () => {
     let release!: () => void;
     vi.stubGlobal('navigator', {

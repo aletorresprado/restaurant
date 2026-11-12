@@ -1,10 +1,10 @@
 # Hoja de ruta a producción
 
-Actualizado: 11 de noviembre de 2026.
+Actualizado: 12 de noviembre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–6 del [plan](PLAN.md) están implementadas en desarrollo local. Hay nueve migraciones versionadas, 20 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes, imágenes e idempotencia de reservas. El frontend agrega 29 pruebas unitarias y veinte recorridos de navegador contra la base real: cliente, gestión, sucursales, mesas, horarios, bloqueos, sesiones y recuperación de reservas en escritorio/móvil. Incluyen respuestas perdidas, recarga sin reenvío automático, dos pestañas recuperando una misma reserva y almacenamiento bloqueado. La recuperación de altas y ajustes entre pestañas está implementada; ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). El trabajo restante corresponde a publicación/operación de la etapa 7. Las sesiones web ya usan cookies HttpOnly; ver SESIONES-WEB.md.
+Las etapas 1–6 del [plan](PLAN.md) están implementadas en desarrollo local. Hay diez migraciones versionadas, 39 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes, imágenes e idempotencia de reservas. El frontend agrega 33 pruebas unitarias y veinte recorridos de navegador contra la base real verificados en la entrega anterior: cliente, gestión, sucursales, mesas, horarios, bloqueos, sesiones y recuperación de reservas en escritorio/móvil. Incluyen respuestas perdidas, recarga sin reenvío automático, dos pestañas recuperando una misma reserva y almacenamiento bloqueado. La recuperación de altas y ajustes entre pestañas está implementada; ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). La etapa 7 está en curso con límites por IP/correo y CSP local para una instancia de API. Las sesiones web ya usan cookies HttpOnly; ver SESIONES-WEB.md.
 
 La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones, puntos y configuración operativa. Siguen pendientes infraestructura e integración continua.
 
@@ -42,13 +42,19 @@ La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplic
 
 Cierre: una persona puede completar los recorridos del producto sin depender de Swagger, incluidos errores y recuperación de sesión.
 
-El recorrido del cliente y la gestión del restaurante se conectan a la API real. La web usa cookies HttpOnly por pestaña, mantiene solamente un UUID público en sessionStorage y elimina confirmaciones locales resueltas. Validación de Origin/CSRF y CORS explícito ya implementadas; ver [SESIONES-WEB.md](SESIONES-WEB.md). Los intentos pendientes y ajustes inciertos requieren conservar información para recuperarse, con límites documentados en equipos compartidos. Altas y ajustes ya cuentan con recuperación compartida entre pestañas y minimización de resultados resueltos. Quedan CSP, límites de intentos y configuración real del despliegue.
+El recorrido del cliente y la gestión del restaurante se conectan a la API real. La web usa cookies HttpOnly por pestaña, mantiene solamente un UUID público en sessionStorage y elimina confirmaciones locales resueltas. Validación de Origin/CSRF y CORS explícito ya implementadas; ver [SESIONES-WEB.md](SESIONES-WEB.md). Los intentos pendientes y ajustes inciertos requieren conservar información para recuperarse, con límites documentados en equipos compartidos. Altas y ajustes ya cuentan con recuperación compartida entre pestañas y minimización de resultados resueltos. Hay límites de solicitudes para una instancia y CSP local; falta la configuración real del despliegue, incluido aplicar los encabezados HTTP de la SPA en el hosting.
 
-## 3. Preparar seguridad y operación — etapa 7, pendiente
+## 3. Preparar seguridad y operación — etapa 7, en curso
 
-- [ ] Agregar límites de intentos para registro, login, renovación y consultas que puedan saturar la API.
+- [x] Límites por IP para registro, login, renovación, consultas y modificaciones, con 429/Retry-After y recuperación manual sin perder UUID. Implementación en memoria de un proceso; ver [LIMITES-API.md](LIMITES-API.md).
+- [ ] Elegir y verificar contador compartido antes de usar varias instancias; validar cuotas bajo carga real, redes compartidas y topología de proxies. Proteger el volumen total en infraestructura.
+- [x] CSP implementada para build web, desarrollo y API/Swagger, con pruebas de navegador separadas del servidor habitual. Ver [CSP.md](CSP.md).
+- [ ] Aplicar los encabezados de `dist/security-headers.json` en el servidor/CDN elegido: el archivo no los configura solo y la meta CSP no ofrece `frame-ancestors`. Verificar en el dominio real.
+- [x] Complementar cuotas IP con fallos por correo: 5/15 minutos, pausa temporal de 60 segundos sin prórroga por rechazos, reinicio por éxito, sin desactivar cuenta y con una sola comprobación concurrente por correo. Memoria de un proceso; ver [LIMITES-API.md](LIMITES-API.md).
+- [ ] Completar recuperación de cuenta y monitoreo de ataques persistentes, que todavía pueden ocasionar pausas repetidas. Evaluar MFA para cuentas sensibles antes de la publicación.
 - [x] CORS restringido a WEB_ORIGINS; producción exige orígenes HTTPS explícitos. La web/API usan el mismo origen, sin credenciales CORS. Verificar los valores del entorno de despliegue antes de publicar.
-- [ ] Definir verificación de correo y recuperación de contraseña, con tokens de un solo uso y vencimiento. Elegir un proveedor de correo solo después de acordar alcance y costo.
+- [x] Recuperación/verificación por enlaces de un solo uso, con vencimiento, hash y pantallas web. Buzón local y adaptador SMTP; ver [CORREO-CUENTAS.md](CORREO-CUENTAS.md).
+- [ ] Acordar proveedor/costo, validar remitente/dominio y probar entrega real. Agregar cola persistente, reintentos, retención de mensajes y alertas. El modo de archivos no completa el envío productivo.
 - [x] Revocación inmediata de la sesión web por cookie al salir de su pestaña; guarda hash, caduca en ocho horas por defecto y comprueba estado/rol en la base.
 - [ ] Definir cierre global y revocación inmediata para los JWT de clientes Bearer/Swagger, que mantienen su contrato anterior. No confundirlos con las cookies web.
 - [ ] Programar limpieza de sesiones vencidas y definir conservación de bloqueos antiguos, eventos y datos de clientes.
@@ -92,7 +98,7 @@ Cierre: el producto es accesible por su dominio, con respaldos restaurables, sup
 
 ## Comprobaciones de la versión actual
 
-Validación local realizada el 28 de octubre de 2026 antes de publicar este conjunto de cambios: compilación correcta, 15 pruebas aprobadas, chequeo de tipos y esquema Prisma correctos, integración PostgreSQL de las etapas 1–4 aprobada y revisión del diff sin errores de espacios. Esta validación no incluye pruebas de carga, frontend ni un despliegue en entorno de prueba.
+Validación del 12 de noviembre de 2026: compilación del monorepo, chequeo de tipos, 72 pruebas (39 API + 33 web), integración PostgreSQL y revisión del diff. Incluye límites por grupo, expiración, memoria acotada, solicitudes concurrentes y rechazo HTTP antes de ejecutar operaciones; la web conserva sesión y UUID tras 429. La suite aislada aprobó doce recorridos en escritorio/móvil, incluyendo pausa por cinco fallos de ingreso, build con CSP, desarrollo y Swagger. Detalles en [CSP.md](CSP.md) y [LIMITES-API.md](LIMITES-API.md). Los veinte recorridos generales de la entrega anterior son un antecedente; no se repitió esa suite completa en este incremento. No hay pruebas de carga ni despliegue de prueba. Se aplicó la décima migración de enlaces de cuenta y versión de credenciales.
 
 Desde la raíz, con una base de desarrollo configurada y migrada:
 

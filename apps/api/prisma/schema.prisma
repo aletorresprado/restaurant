@@ -20,6 +20,8 @@ model User {
   lastName     String
   phone        String?
   passwordHash String
+  authVersion Int @default(0)
+  emailVerifiedAt DateTime?
   role         Role      @default(CUSTOMER)
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
@@ -32,6 +34,26 @@ model User {
   loyaltyMovements LoyaltyMovement[] @relation("LoyaltyOwner")
   loyaltyAdjustments LoyaltyMovement[] @relation("LoyaltyActor")
   writeOperations WriteOperation[]
+  actionTokens AccountActionToken[]
+}
+
+enum AccountActionPurpose {
+  RESET_PASSWORD
+  VERIFY_EMAIL
+}
+
+model AccountActionToken {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  purpose AccountActionPurpose
+  email String
+  tokenHash String @unique @db.Char(64)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, purpose])
+  @@index([expiresAt])
 }
 
 model WriteOperation {

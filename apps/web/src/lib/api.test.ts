@@ -58,6 +58,17 @@ describe('cookie authenticated API client', () => {
     });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('shows the rate-limit wait message without replaying or closing the session', async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(429, {
+      code: 'RATE_LIMITED', message: 'Demasiados intentos. Esperá 60 segundos antes de volver a intentar.',
+    }));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(api('/reservations', { method: 'POST', body: '{}' }, true)).rejects.toMatchObject({
+      status: 429, code: 'RATE_LIMITED', message: expect.stringContaining('60 segundos'),
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(getSession()?.user.id).toBe(user.id);
+  });
   it('preserves the local session if revocation cannot reach the server', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     await expect(logoutSession()).rejects.toMatchObject({ status: 0 });

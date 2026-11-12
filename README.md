@@ -4,7 +4,7 @@ Monorepo pnpm con API NestJS, validación Zod y tipos compartidos.
 
 ## Estado
 
-Estado al 6 de noviembre de 2026: API funcional en desarrollo local, con las etapas 1 a 5 completadas, e interfaz web de clientes, agenda y administración, incluida gestión de sucursales, imágenes, mesas, horarios, excepciones y bloqueos temporales. La etapa 6 sigue abierta por revisión de sesiones y almacenamiento. El proyecto aún no está preparado para operar en producción.
+Estado al 12 de noviembre de 2026: etapas 1 a 6 completadas en desarrollo local, con sesiones HttpOnly y recuperación de reservas/gestión entre pestañas. Etapa 7 en curso: límites por IP/correo, CSP, recuperación de contraseña y verificación de correo implementados localmente. Falta activar y verificar la entrega SMTP real. El proyecto aún no está preparado para operar en producción.
 
 - Identidad: registro, login, perfil, renovación y cierre de sesión con persistencia PostgreSQL/Prisma.
 - Organización: permisos por rol, sucursales y asignaciones de personal, con permisos consultados en cada petición.
@@ -15,7 +15,23 @@ El registro público crea clientes; el administrador se crea mediante un comando
 
 El diseño del frontend se adaptó desde Lovable conservando nuestras reglas y autenticación. Están conectados sucursales, disponibilidad, registro/login, confirmación, reservas propias y cancelación. Ver [FRONTEND.md](docs/FRONTEND.md).
 
-El registro de **asistencia y ausencia** aplica puntos de forma transaccional y auditable: asistencia +1, encuesta +2 y ausencia −3, con saldo mínimo cero. **Mis reservas** muestra saldo, nivel e historial; una visita con asistencia ya finalizada permite responder su encuesta. STAFF/ADMIN operan desde **Agenda** y ADMIN gestiona usuarios, asignaciones y ajustes auditados desde **Administración**. Los eventos anteriores no se recalculan automáticamente. Ver [FIDELIZACION.md](docs/FIDELIZACION.md) y [GESTION-WEB.md](docs/GESTION-WEB.md). Siguen pendientes los formularios de configuración operativa y la preparación del despliegue, detalladas en el [plan](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md).
+El registro de **asistencia y ausencia** aplica puntos de forma transaccional y auditable: asistencia +1, encuesta +2 y ausencia −3, con saldo mínimo cero. **Mis reservas** muestra saldo, nivel e historial; una visita con asistencia ya finalizada permite responder su encuesta. STAFF/ADMIN operan desde **Agenda** y ADMIN gestiona usuarios, asignaciones y ajustes auditados desde **Administración**. Los eventos anteriores no se recalculan automáticamente. Ver [FIDELIZACION.md](docs/FIDELIZACION.md) y [GESTION-WEB.md](docs/GESTION-WEB.md). La configuración operativa web está implementada; sigue la preparación del despliegue, detallada en el [plan](docs/PLAN.md) y la [hoja de ruta a producción](docs/PRODUCCION.md).
+
+La API responde **429** con tiempo de espera cuando una IP supera la cuota: login 30/15 min, registro 10/hora, renovación 60/min, modificaciones 120/min y consultas 300/min. Además, **5 fallos de ingreso al mismo correo en 15 minutos provocan una pausa de 60 segundos**, compartida entre web/Swagger e IP. Los rechazos no prolongan la pausa y un ingreso correcto limpia los fallos de esa cuenta. No revoca sesiones existentes ni desactiva usuarios; intentos simultáneos al mismo correo reciben 429/1 segundo mientras se comprueba el primero. Logout y salud quedan disponibles. No hay reenvíos automáticos ni pérdida del UUID pendiente. Funciona por defecto sin servicios externos ni migraciones; contadores en memoria de un proceso, reiniciados al reiniciar la API. Configuración `RATE_LIMIT_*`, `LOGIN_ACCOUNT_FAILURES`, `LOGIN_ACCOUNT_PAUSE_SECONDS`, proxies y restricciones para varias instancias en [LIMITES-API.md](docs/LIMITES-API.md). Un ataque persistente todavía puede provocar pausas repetidas; no se considera protección completa ni certificación para producción.
+
+**CSP implementada:** el build web solo permite scripts y conexiones del mismo origen, mantiene Google Fonts y las imágenes/previsualizaciones y bloquea scripts inline/eval. Incluye CSP en el HTML; `preview` agrega encabezados HTTP y la compilación genera `dist/security-headers.json` para configurar el futuro hosting. Ese JSON no instala encabezados automáticamente. Desarrollo tiene excepciones separadas para HMR y Swagger una política propia. Ver [CSP.md](docs/CSP.md), comandos y limitaciones de despliegue. No requiere servicios ni migraciones nuevos.
+
+Validación del 12 de noviembre: build, tipos, 72 pruebas (39 API + 33 web), integración PostgreSQL y doce recorridos de `pnpm.cmd --filter @repo/web test:security` aprobados. Incluye fallos por correo, pausa sin prórroga, concurrencia, recuperación por éxito/vencimiento, mensaje de espera en móvil/escritorio, recuperación con el mismo UUID tras 429, CSP, Swagger y flujos del build. Las primeras corridas de CSP tuvieron demoras y una desconexión de PostgreSQL; la última suite ampliada aprobó completa, incluyendo recuperación y verificación de correo. No se repitieron los veinte recorridos generales anteriores ni se hicieron pruebas de carga. Detalles en [CSP.md](docs/CSP.md) y [LIMITES-API.md](docs/LIMITES-API.md). Recuperación de contraseña y verificación de correo ya implementadas con buzón local; envío real y cola persistente pendientes.
+
+## Correo y recuperación de cuenta
+
+Desde **Ingresar** están disponibles **Olvidé mi contraseña** y **Verificar mi correo**; las cuentas sin verificar muestran un aviso y pueden seguir reservando. La décima migración `20261112000100_account_actions` está aplicada localmente. En otra instalación: actualizar dependencias, generar Prisma, aplicar migraciones y compilar antes de reiniciar.
+
+Por defecto, los mensajes se guardan como archivos privados en `apps/api/.local/mail`: abrir el JSON del destinatario y copiar el enlace completo al navegador. No se envían correos reales. Reset vence en 15 minutos y verificación en 24 horas; ambos requieren confirmación y solo sirven una vez. Restablecer invalida cookies, refresh y JWT anteriores sin modificar reservas, puntos ni roles. Ver [CORREO-CUENTAS.md](docs/CORREO-CUENTAS.md) para el recorrido paso a paso, Swagger, variables SMTP y limitaciones de entrega.
+
+Se agregó Nodemailer 10.5.0. `MAIL_MODE=file` es solo local; producción exige `MAIL_MODE=smtp`, remitente y credenciales privados y `PUBLIC_WEB_URL` HTTPS incluido en `WEB_ORIGINS`. Antes de enviar a casillas reales falta acordar proveedor/costo, verificar el remitente y comprobar entrega; también queda pendiente una cola persistente. No se contrató ningún servicio ni se enviaron mensajes reales. Los archivos del buzón están ignorados por Git y bloqueados en Vite; no compartirlos.
+
+**Aceptación manual del propietario, 12 de noviembre:** completó satisfactoriamente la recuperación de contraseña y la verificación de correo siguiendo el recorrido del buzón local. Confirmó que pudo realizar ambas pruebas desde la web. Esta aceptación valida el uso local; no acredita entrega a Gmail/SMTP ni publicación en producción. El procedimiento y las comprobaciones automáticas están en [CORREO-CUENTAS.md](docs/CORREO-CUENTAS.md).
 
 ## Un proyecto, varias herramientas
 
@@ -101,7 +117,7 @@ Todos los endpoints llevan el prefijo `/api/v1/auth`:
 
 Los endpoints Bearer de esta tabla (Swagger/clientes API) devuelven `user`, `accessToken` y `refreshToken`. La web usa `/auth/web/login`, `/auth/web/register` y `/auth/web/logout`, con cookies HttpOnly, y recibe solo el usuario. La contraseña requiere al menos 8 caracteres, una mayúscula y un número; máximo 72 bytes por el límite de bcrypt. Correos normalizados a minúsculas. Nunca se devuelven hashes de contraseñas.
 
-Al renovar, reemplazar ambos tokens en el cliente: el refresh anterior deja de funcionar. Logout revoca el refresh presentado; el access token sigue vigente hasta su expiración (15 minutos por defecto). No se implementa todavía revocación inmediata del access token ni logout de todos los dispositivos. Las sesiones vencidas se rechazan, pero aún no hay tarea de limpieza de sus registros.
+Al renovar, reemplazar ambos tokens en el cliente: el refresh anterior deja de funcionar. Logout revoca el refresh presentado; el access token sigue vigente hasta su expiración (15 minutos por defecto). Restablecer la contraseña incrementa la versión de credenciales y revoca también los access tokens anteriores. Logout de todos los dispositivos como acción independiente sigue pendiente. Las sesiones vencidas se rechazan, pero aún no hay tarea de limpieza de sus registros.
 
 ## Administrador inicial
 
@@ -164,7 +180,7 @@ La fidelización agrega la quinta migración, `20261103000100_loyalty`. Para act
 
 ### Agenda y administración web
 
-Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 11 de noviembre** en [docs/PLAN.md](docs/PLAN.md). La configuración operativa principal ya tiene gestión web y las reservas permiten recuperar reintentos; las etapas funcionales 1–6 están verificadas en desarrollo local y sigue la preparación productiva de la etapa 7.
+Para continuar el desarrollo después de esta entrega, consultar el **punto de reanudación del 12 de noviembre** en [docs/PLAN.md](docs/PLAN.md). La configuración operativa principal ya tiene gestión web y las reservas permiten recuperar reintentos; las etapas funcionales 1–6 están verificadas en desarrollo local y sigue la preparación productiva de la etapa 7.
 
 Las cuentas STAFF ingresan a **Agenda** (`/personal`): sucursal asignada, fecha de servicio, reservas, asistencia, ausencia, cancelación e historial. Las cuentas ADMIN también acceden a **Administración** (`/administracion`): **Usuarios y puntos** para roles, asignaciones y ajustes auditados; **Sucursales** para crear, editar, activar y desactivar, con validación de datos y confirmación de desactivación. Los cambios actualizan el catálogo y las sucursales disponibles para agenda/asignaciones. La API rechaza desactivar sucursales con reservas vigentes. Una sucursal nueva necesita mesas y horarios para ofrecer turnos; esa configuración sigue disponible desde Swagger.
 
@@ -176,7 +192,7 @@ Si olvidaste la contraseña de una cuenta de desarrollo existente, ejecutar desd
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\reset-local-password.ps1 -Email "tu-correo@example.com"
 ```
 
-Pide una nueva contraseña oculta (mínimo 8 caracteres, una mayúscula y un número; máximo 72 bytes). Solo admite `NODE_ENV=development` y PostgreSQL local `app_resto_dev`. Conserva cuenta, rol, reservas y puntos; actualiza el hash y elimina sus sesiones de renovación en una transacción. Los access tokens existentes siguen vigentes hasta vencer; cerrar sesión y volver a ingresar en la web o generar otro token en Swagger. No reactiva cuentas desactivadas, no envía correos ni guarda contraseñas en archivos. Es una herramienta del operador local, no recuperación pública de contraseña. Verificación con cuentas temporales: `pnpm.cmd --filter @repo/api exec node --test scripts/reset-local-password.test.cjs`.
+Pide una nueva contraseña oculta (mínimo 8 caracteres, una mayúscula y un número; máximo 72 bytes). Solo admite `NODE_ENV=development` y PostgreSQL local `app_resto_dev`. Conserva cuenta, rol, reservas y puntos; actualiza el hash y elimina sus sesiones de renovación en una transacción. También invalida los access tokens anteriores mediante la versión de credenciales y elimina enlaces de cuenta pendientes; volver a ingresar en la web o generar otro token en Swagger. No reactiva cuentas desactivadas, no envía correos ni guarda contraseñas en archivos. Es una herramienta del operador local, no recuperación pública de contraseña. Verificación con cuentas temporales: `pnpm.cmd --filter @repo/api exec node --test scripts/reset-local-password.test.cjs`.
 
 **Mesas** (`/mesas`) permite a ADMIN y STAFF autorizado elegir sucursal, listar mesas con paginación, crear con capacidad 1–50 y editar capacidad/estado. ADMIN también llega desde **Administración → Sucursales → Gestionar mesas** y puede configurar sucursales inactivas. El número queda fijo y es único dentro de cada sucursal. Los cambios a Bloqueada o Fuera de servicio requieren confirmación, y la API impide afectar reservas vigentes. No hay borrado permanente. Ver [MESAS-WEB.md](docs/MESAS-WEB.md) para el recorrido, pruebas y límites. Esta entrega no requiere nuevas dependencias ni migraciones.
 
@@ -192,7 +208,7 @@ Esta función agrega la sexta migración, `20261104000100_branch_images`, ya apl
 
 **Recuperación de gestión:** las altas de sucursales, mesas, horarios, excepciones y bloqueos usan `Idempotency-Key`. Si se corta la conexión, abrir **Operaciones pendientes** debajo del menú, revisar destino/datos y pulsar **Verificar y reintentar**. Se conserva el UUID al recargar o volver a ingresar y se comparte por cuenta entre pestañas; recuperar no duplica el alta ni recrea un registro eliminado. Los borradores/ajustes de puntos se comparten por administrador y cliente, con UUID y autor fijos tras intentar enviarlos. Solo persisten pendientes; se eliminan al resolver. Sin almacenamiento o Web Locks no se envía. PATCH/PUT/DELETE mantienen sus reglas, sin control de versiones nuevo. Ver [RECUPERACION-GESTION.md](docs/RECUPERACION-GESTION.md), incluidos datos conservados en equipos compartidos y compatibilidad de clientes antiguos sin clave.
 
-La **novena migración**, `20261111000300_management_operations`, está aplicada localmente. Agrega el registro transaccional de altas por usuario y operación; no recalcula puntos ni modifica registros anteriores. En otra instalación, detener la API si bloquea Prisma en Windows, generar cliente, aplicar migraciones y compilar antes de reiniciar. No requiere dependencias ni cuentas nuevas. Esta entrega completa la etapa 6 en desarrollo local; siguen límites de intentos, CSP, recuperación de correo e infraestructura de la etapa 7, según [PLAN.md](docs/PLAN.md).
+La **novena migración**, `20261111000300_management_operations`, está aplicada localmente. Agrega el registro transaccional de altas por usuario y operación; no recalcula puntos ni modifica registros anteriores. En otra instalación, detener la API si bloquea Prisma en Windows, generar cliente, aplicar migraciones y compilar antes de reiniciar. No requiere dependencias ni cuentas nuevas. Esta entrega completa la etapa 6 en desarrollo local; la etapa 7 incorpora límites por IP/correo y CSP local; mantiene pendientes entrega SMTP real e infraestructura, según [PLAN.md](docs/PLAN.md).
 
 Prueba manual confirmada por el propietario: revisar un ajuste de +2 puntos muestra el borrador en dos pestañas; **Volver a editar** lo retira de ambas y habilita nuevamente los campos. Revisar/cancelar no aplica puntos; solo **Confirmar ajuste** envía el movimiento. Validación automatizada de esta entrega: 49 pruebas unitarias, integración PostgreSQL y veinte recorridos de navegador aprobados.
 
@@ -205,7 +221,7 @@ pnpm.cmd lint
 pnpm.cmd --filter @repo/api exec prisma validate
 ```
 
-Las 20 pruebas de API cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas, cancelación y tiempos de asistencia/ausencia. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
+Las pruebas de API cubren configuración, sesiones, autenticación HTTP con datos simulados, fechas de servicio, solapamientos, límites de reservas, cancelación, tiempos de asistencia/ausencia y límites de solicitudes con HTTP real. No reemplazan una prueba de integración contra PostgreSQL. `db:migrate` sirve para crear nuevas migraciones durante desarrollo; `db:deploy` aplica las versionadas.
 
 El frontend agrega pruebas de sesiones por cookie, errores de conexión, logout, privacidad de confirmaciones y fechas; `pnpm.cmd test` incluye API y web. Para el recorrido real en navegador, después de compilar e instalar Chromium con `pnpm.cmd --filter @repo/web exec playwright install chromium`, ejecutar `pnpm.cmd --filter @repo/web test:e2e`. Usa PostgreSQL de desarrollo y recursos temporales propios. Detalles y límites de sesión en [FRONTEND.md](docs/FRONTEND.md).
 
@@ -231,7 +247,7 @@ Para iniciar la API después de reiniciar el equipo:
 pnpm.cmd --filter @repo/api start
 ```
 
-Antes de exponer la API a internet, agregar límites de intentos de autenticación, política CORS por dominio y HTTPS, y definir recuperación de contraseñas/verificación de correo. Esas funciones aún no están implementadas.
+Antes de exponer la API a internet, aplicar/verificar los encabezados CSP en el hosting, comprobar HTTPS/CORS y proxies y configurar/verificar el envío SMTP real, la cola de correo y su supervisión. CSP local, CORS explícito y límites por IP/correo ya están implementados; los contadores actuales requieren una sola instancia. Ver [CSP.md](docs/CSP.md), [LIMITES-API.md](docs/LIMITES-API.md) y la hoja de ruta.
 
 ## Cómo continuar el proyecto
 

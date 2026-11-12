@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { Request, Response, NextFunction } from 'express';
+import { securityHeaders } from './common/security-headers';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,13 +15,10 @@ async function bootstrap() {
 
   // La SPA usa el mismo origen por proxy; no hay cookies CORS entre orígenes.
   const settings = app.get(ConfigService);
+  // Trust only explicitly configured proxy IPs; never trust arbitrary forwarding headers.
+  app.getHttpAdapter().getInstance().set('trust proxy', settings.get<string[]>('TRUSTED_PROXY_IPS') ?? false);
   app.enableCors({ origin: settings.get<string[]>('WEB_ORIGINS'), credentials: false });
-  app.use((_request: Request, response: Response, next: NextFunction) => {
-    response.setHeader('Cache-Control', 'no-store');
-    response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.setHeader('Referrer-Policy', 'no-referrer');
-    next();
-  });
+  app.use(securityHeaders);
 
   // Swagger / OpenAPI
   const config = new DocumentBuilder()
@@ -31,7 +28,9 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: { validatorUrl: null, persistAuthorization: false },
+  });
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

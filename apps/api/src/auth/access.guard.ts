@@ -33,7 +33,7 @@ export class AccessGuard implements CanActivate {
       const payload = await this.jwt.verifyAsync(match[1]);
       const id = z.string().uuid().parse(payload.sub);
       const user = await this.db.user.findUnique({ where: { id } });
-      if (!user?.isActive) throw new UnauthorizedException();
+      if (!user?.isActive || (payload.av ?? 0) !== (user.authVersion ?? 0)) throw new UnauthorizedException();
       request.userId = id;
       request.userRole = user.role as Role;
       return true;

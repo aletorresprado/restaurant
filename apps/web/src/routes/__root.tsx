@@ -53,6 +53,13 @@ function ReservationRecoveryNotice() {
     </div>
   );
 }
+function EmailVerificationNotice() {
+  const { user } = useStore();
+  if (!user || user.emailVerifiedAt) return null;
+  return <div className="mx-auto w-full max-w-5xl px-5 pt-4"><Notice title="Confirmá tu correo">
+    Verificá tu dirección para mantener tu cuenta al día. <Link to="/correo" className="underline">Enviar enlace de verificación</Link>
+  </Notice></div>;
+}
 function Root() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -68,6 +75,7 @@ function Root() {
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
           <SessionNotice />
+          <EmailVerificationNotice />
           <ReservationRecoveryNotice />
           <ManagementRecovery />
           <main id="contenido" className="flex-1">
