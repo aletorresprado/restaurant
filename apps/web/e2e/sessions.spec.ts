@@ -1,21 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 
 const apiRequire = createRequire(new URL('../../api/package.json', import.meta.url));
 const { PrismaClient } = apiRequire('@prisma/client');
 const bcrypt = apiRequire('bcryptjs');
-const environment = fileURLToPath(new URL('../../api/.env', import.meta.url));
-if (existsSync(environment)) process.loadEnvFile(environment);
-const target = new URL(process.env.DATABASE_URL ?? '');
-if (
-  !['localhost', '127.0.0.1', '[::1]'].includes(target.hostname) ||
-  target.pathname !== '/app_resto_dev' ||
-  (process.env.NODE_ENV ?? 'development') !== 'development'
-)
-  throw new Error('Las pruebas de sesiones solo admiten la base local app_resto_dev.');
+const testDatabase = apiRequire('../../scripts/test-database.cjs');
+testDatabase.loadTestEnvironment();
+
 
 async function login(page: Page, email: string, name: string) {
   await page.goto('/ingresar');
@@ -30,9 +22,7 @@ test('tabs own independent sessions; copied storage cannot rotate or revoke the 
   context,
 }) => {
   test.setTimeout(90000);
-  const target = new URL(process.env.DATABASE_URL ?? '');
-  expect(['localhost', '127.0.0.1', '[::1]']).toContain(target.hostname);
-  expect(target.pathname).toBe('/app_resto_dev');
+  testDatabase.assertTestDatabase();
   const db = new PrismaClient();
   const ids = [randomUUID(), randomUUID()];
   const emails = ids.map((id) => `sessions-${id}@example.invalid`);

@@ -7,6 +7,8 @@ export default defineConfig({
   timeout: 60000,
   expect: { timeout: 15000 }, // Allow the API's 15-second request window on this local PostgreSQL environment.
   workers: 1,
+  forbidOnly: !!process.env.CI,
+  reporter: 'list',
   retries: 0,
   use: { baseURL: 'http://127.0.0.1:5180', trace: 'retain-on-failure' },
   projects: [
@@ -21,7 +23,8 @@ export default defineConfig({
         RATE_LIMIT_WRITE: '10000', RATE_LIMIT_READ: '10000',
         LOGIN_ACCOUNT_FAILURES: '5', LOGIN_ACCOUNT_PAUSE_SECONDS: '60',
         RATE_LIMIT_ACCOUNT_REQUEST: '10000', RATE_LIMIT_ACCOUNT_CONFIRM: '10000',
-        MAIL_MODE: 'file', MAIL_OUTBOX_DIR: '.local/security-mail', PUBLIC_WEB_URL: 'http://127.0.0.1:5180' }, reuseExistingServer: false },
+        MAIL_MODE: 'file', MAIL_OUTBOX_DIR: '.local/security-mail', PUBLIC_WEB_URL: 'http://127.0.0.1:5180',
+        MAINTENANCE_ENABLED: 'false' }, reuseExistingServer: false },
     { command: 'node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5180 --strictPort',
       cwd: '.', url: 'http://127.0.0.1:5180', env: { API_PROXY_TARGET: 'http://127.0.0.1:3002' }, reuseExistingServer: false },
     { command: 'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5181 --strictPort',

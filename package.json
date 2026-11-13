@@ -11,6 +11,8 @@
     "test": "turbo run test",
     "test:unit": "turbo run test:unit",
     "test:integration": "turbo run test:integration",
+    "test:guards": "node --test scripts/test-database.test.cjs",
+    "ci:preflight": "node scripts/ci-preflight.cjs",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed"
@@ -21,7 +23,7 @@
     "typescript": "^5.7.3"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.19.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.15.4"

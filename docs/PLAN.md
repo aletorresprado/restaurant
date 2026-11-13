@@ -1,14 +1,16 @@
 # Plan de desarrollo de App Resto
 
-Actualizado: 12 de noviembre de 2026.
+Actualizado: 13 de noviembre de 2026.
 
 ## Objetivo
 
 Construir un sistema de reservas y fidelización para un restaurante con varias sucursales, con una API persistente y una interfaz para clientes y personal.
 
+Alcance de cierre acordado con el propietario: publicar la aplicación **web** en un hosting elegido y contratado de común acuerdo, dejarla funcionando y preparar documentación/demostración para su proyecto final de la maestría en desarrollo con IA. Se documentará la interacción Lovable–Codex–GitHub y las decisiones/validaciones. Google Play y App Store quedan fuera de esta entrega; PWA/móvil se evaluarán después si se solicitan.
+
 ## Estado y recorrido restante
 
-Las etapas 1 a 6 están implementadas y verificadas en desarrollo local: persistencia, permisos, operación, reservas, fidelización e interfaz de clientes/personal. Incluyen cookies HttpOnly, reintentos de reservas y altas de gestión, y ajustes de puntos compartidos entre pestañas. La etapa 7 está en curso: límites por IP implementados para una instancia; siguen encabezados/HTTPS real, entrega de correo, mantenimiento, CI, respaldos y despliegue. Recuperación/verificación ya implementadas con buzón local y adaptador SMTP. No hay producción publicada.
+Las etapas 1 a 6 están implementadas y verificadas en desarrollo local: persistencia, permisos, operación, reservas, fidelización e interfaz de clientes/personal. Incluyen cookies HttpOnly, reintentos de reservas y altas de gestión, y ajustes de puntos compartidos entre pestañas. La etapa 7 está en curso: límites por IP implementados para una instancia; siguen encabezados/HTTPS real, entrega de correo, supervisión/retención, CI, respaldos y despliegue. La limpieza de sesiones/enlaces y readiness PostgreSQL están implementadas. Recuperación/verificación ya implementadas con buzón local y adaptador SMTP. No hay producción publicada.
 
 La [hoja de ruta a producción](PRODUCCION.md) desglosa esos pendientes, las decisiones del propietario y los criterios para publicar. Tener el código subido a GitHub o Swagger accesible localmente no completa la etapa de despliegue.
 
@@ -35,7 +37,7 @@ No marcar una etapa como terminada solo por tener tipos, dependencias o esquemas
 
 Validado: compilación, chequeo de tipos, esquema Prisma, 11 pruebas automatizadas y prueba real de registro, login, perfil, persistencia, rotación concurrente, logout y rechazo de usuarios desactivados. PostgreSQL local y Swagger accesibles en el equipo de desarrollo.
 
-Límites actuales: entrega SMTP real, limpieza de sesiones vencidas y cierre global explícito pendientes. La etapa 7 implementa recuperación/verificación local y revoca también JWT al restablecer contraseña. Los límites por IP se implementaron en la etapa 7. El administrador inicial no se crea automáticamente.
+Límites actuales: entrega SMTP real, retención de otros datos y cierre global explícito pendientes. Ya hay limpieza de sesiones/enlaces vencidos. La etapa 7 implementa recuperación/verificación local y revoca también JWT al restablecer contraseña. Los límites por IP se implementaron en la etapa 7. El administrador inicial no se crea automáticamente.
 
 ## 2. Permisos y sucursales — completada
 
@@ -127,8 +129,8 @@ Criterio de cierre: los recorridos principales funcionan desde la interfaz contr
 
 1. Límites por IP/correo y CSP de web/API/Swagger implementados localmente. Aplicar encabezados de la SPA y validar CORS, proxies y HTTPS en el hosting real. Incorporar contadores compartidos antes de usar varias instancias.
 2. Recuperación/verificación implementadas localmente. Acordar proveedor/costo, configurar SMTP y remitente, y verificar entrega con cola persistente antes de publicar.
-3. Definir limpieza de sesiones vencidas, logs operativos y comprobación de disponibilidad de la base.
-4. Configurar integración continua para compilación, pruebas y migraciones en una base aislada.
+3. Limpieza de sesiones/enlaces vencidos y readiness PostgreSQL implementadas. Completar retención del resto de datos, logs centralizados y alertas.
+4. Workflow CI preparado para compilación, pruebas y migraciones en PostgreSQL aislado. Validar la primera ejecución remota: las últimas suites locales de navegador ya aprobaron tras corregir la sincronización del helper de bloqueos. No marcar CI cerrada antes del resultado remoto.
 5. Elegir hosting, presupuesto, secretos, copias de seguridad y procedimiento de restauración.
 6. Validar migraciones y recorridos completos en un entorno de prueba antes de publicar.
 
@@ -136,7 +138,7 @@ Criterio de cierre: despliegue reproducible con configuración separada, respald
 
 Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye seguridad de autenticación, reconciliación de reintentos de reserva, CI, entorno de prueba, migraciones, restauración y validación del primer lanzamiento. Los controles de publicación todavía no están completos.
 
-## Punto de reanudación — actualizado el 12 de noviembre de 2026
+## Punto de reanudación — actualizado el 13 de noviembre de 2026
 
 Las etapas 1–6 están completas en desarrollo local. La última entrega versionada incorporó cookies HttpOnly, recuperación de reservas y altas de gestión con UUID, panel de pendientes y borradores/ajustes de puntos compartidos entre pestañas. Hay diez migraciones aplicadas localmente; no se publicaron servicios en producción. Referencias: [SESIONES-WEB.md](SESIONES-WEB.md), [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md) y [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md).
 
@@ -162,10 +164,20 @@ Validación de correo: build, tipos, esquema Prisma, 72 pruebas unitarias/HTTP (
 
 Aceptación del propietario del 12 de noviembre: confirmó que pudo completar desde la web la recuperación de contraseña y la verificación de correo con el buzón local, siguiendo el procedimiento de [CORREO-CUENTAS.md](CORREO-CUENTAS.md). La entrega queda validada manualmente para desarrollo; no hay proveedor SMTP real ni producción publicada.
 
+Entrega del 13 de noviembre: mantenimiento automático de sesiones/enlaces vencidos al iniciar y cada 15 minutos, en lotes de 500 por tabla hasta 10 lotes por ejecución. Selección con bloqueo y SKIP LOCKED, sin superposición local y cierre ordenado antes de desconectar Prisma. Solo borra credenciales vencidas; conserva usuarios, reservas, puntos, archivos de correo y registros de idempotencia. Readiness `/api/v1/health/ready` consulta PostgreSQL y devuelve 200/503, caché de un segundo y plazo HTTP de dos segundos; liveness mantiene `/health`. Logs del mantenimiento con cantidades o aviso genérico, sin secretos. Sin dependencias ni migraciones nuevas. Ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
+
+Validación del mantenimiento: build, tipos, 81 pruebas (48 API + 33 web) e integración PostgreSQL completa. Los borrados se prueban en tablas temporales por conexión con la estructura real, sin tocar registros de la aplicación; vigentes conservados, idempotencia y presupuesto por ejecución. La primera prueba detectó un desfase al castear timestamps en la zona del servidor: corregido con UTC explícito y verificado en Pacific/Auckland con vencimientos próximos. Se prueban timeout, recuperación y 503 genérico mediante dobles, y readiness con PostgreSQL disponible. No se detuvo la base real ni se repitió Playwright: la interfaz no cambia. Continúan pendientes monitor/alertas, retención de otros datos/archivos, cola SMTP, CI, respaldos y despliegue para la presentación web de tesis.
+
+Entrega de CI del 13 de noviembre: workflow GitHub Actions con acciones fijadas por SHA, permisos de lectura y PostgreSQL 16 efímero. Usuario de aplicación sin privilegios de superusuario/creación de bases/roles; guardas de host/nombre para impedir usar desarrollo/producción en modo CI. Node 22.19.0 y pnpm 9.15.4, instalación con lockfile, generación Prisma, migraciones, build/tipos, pruebas e integración y suites de navegador. Configuración sin despliegue ni secretos reales/SMTP. Los tests y Nest no cargan el `.env` local en modo CI. Ver [CI.md](CI.md).
+
+Validación local de CI: actionlint 1.7.12 aprobó el workflow; tres pruebas de guardas, permisos reales, diez migraciones desde cero y segunda aplicación sin pendientes aprobados. Build, tipos, 81 pruebas API/web, integración y prueba PostgreSQL del operador aprobados sobre base nueva aislada. Primera corrida general: 19/20 recorridos aprobados; bloqueos móvil falló por timeout de transacción de ingreso. Segunda: 18/20, con fallos en bloqueos por espera/timeout; repetición aislada aprobó móvil y falló escritorio en ingreso. No se estableció una causa definitiva ni se modificaron timeouts de producción o reintentos para ocultarlo. La primera ejecución remota de Ubuntu está pendiente de subir el workflow y se necesita una corrida completa aprobada para cerrar CI. Las bases temporales se eliminan al terminar cada intento; no se usa la base de desarrollo como destino de pruebas CI.
+
+Cierre de validación local: se corrigió el helper de ingreso de bloqueos, que esperaba solo la respuesta HTTP; ahora confirma su éxito, espera la sesión visible y la redirección antes de continuar. La última corrida general aprobó 20/20 en 2,8 minutos. La suite independiente de seguridad aprobó 12/12 en 59,7 segundos. No se tocaron timeouts de producción ni se agregaron reintentos automáticos. Se retiraron todas las bases creadas para esos intentos. La incidencia y los resultados anteriores se conservan como antecedente; CI remota sigue pendiente hasta subir el workflow.
+
 Para continuar:
 
 1. Acordar proveedor/costo y activar el envío real cuando haya remitente/SMTP. Agregar cola persistente y supervisión de correo antes de publicar; el buzón local no envía a internet.
-2. Mantenimiento de sesiones, logs y salud de PostgreSQL; después CI con una base aislada.
+2. Subir el workflow CI cuando se autorice commit/push y verificar la ejecución en GitHub; contrastar allí la corrección del helper de ingreso de bloqueos. Definir logs centralizados, alertas y retención de otros datos. Limpieza y salud PostgreSQL ya implementadas.
 3. Hosting, presupuesto, secretos, respaldo/restauración y entorno de prueba, siguiendo [PRODUCCION.md](PRODUCCION.md). Aplicar encabezados CSP y verificar HTTPS/CORS/proxies; CSP por meta no sustituye `frame-ancestors` por cabecera.
 4. Ejecutar recorridos en preproducción, accesibilidad, rendimiento y revisión de dependencias antes de solicitar la publicación.
 

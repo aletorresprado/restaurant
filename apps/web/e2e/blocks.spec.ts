@@ -1,14 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 
 const apiRequire = createRequire(new URL('../../api/package.json', import.meta.url));
 const { PrismaClient } = apiRequire('@prisma/client');
 const bcrypt = apiRequire('bcryptjs');
-const environment = fileURLToPath(new URL('../../api/.env', import.meta.url));
-if (existsSync(environment)) process.loadEnvFile(environment);
+const testDatabase = apiRequire('../../scripts/test-database.cjs');
+testDatabase.loadTestEnvironment();
 test.use({ timezoneId: 'Pacific/Auckland' });
 const nextDate = (date: string, days = 1) =>
   new Date(Date.parse(`${date}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
@@ -18,7 +16,9 @@ async function login(page: Page, email: string) {
   await page.getByLabel('Contraseña', { exact: true }).fill('Password123');
   const response = page.waitForResponse((r) => r.url().endsWith('/auth/web/login'));
   await page.getByRole('button', { name: 'Ingresar', exact: true }).last().click();
-  await response;
+  expect((await response).ok()).toBe(true);
+  await expect(page.getByRole('button', { name: /^Salir \(/ })).toBeVisible();
+  await expect(page).toHaveURL(/\/(personal|administracion|mis-reservas)(?:\?|$)/);
   const legacy = await page.request.post('http://127.0.0.1:3000/api/v1/auth/login', {
     data: { email, password: 'Password123' },
   });

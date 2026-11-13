@@ -3,6 +3,13 @@ import { describe, it, expect } from '@jest/globals';
 
 describe('environment configuration', () => {
   const valid = { DATABASE_URL: 'postgresql://user:password@localhost:5432/resto', JWT_ACCESS_SECRET: 'a'.repeat(64) };
+  it('validates maintenance switches, cadence and batch bounds', () => {
+    expect(validateEnvironment(valid).MAINTENANCE_ENABLED).toBe(true);
+    expect(validateEnvironment({ ...valid, MAINTENANCE_ENABLED: 'false' }).MAINTENANCE_ENABLED).toBe(false);
+    expect(() => validateEnvironment({ ...valid, MAINTENANCE_ENABLED: '0' })).toThrow();
+    expect(() => validateEnvironment({ ...valid, MAINTENANCE_INTERVAL_SECONDS: 59 })).toThrow();
+    expect(() => validateEnvironment({ ...valid, MAINTENANCE_BATCH_SIZE: 1001 })).toThrow();
+  });
   it('keeps file delivery local and rejects incomplete SMTP configuration', () => {
     expect(() => validateEnvironment({ ...valid, PUBLIC_WEB_URL: 'https://example.com' })).toThrow();
     expect(() => validateEnvironment({ ...valid, MAIL_MODE: 'smtp' })).toThrow();

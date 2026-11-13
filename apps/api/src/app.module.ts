@@ -8,6 +8,8 @@ import { validateEnvironment } from './environment';
 import { BranchesModule } from './branches/branches.module';
 import { OperationsModule } from './operations/operations.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { MaintenanceService } from './maintenance/maintenance.service';
+import { HealthService } from './health.service';
 
 @Module({
   imports: [
@@ -16,6 +18,7 @@ import { ReservationsModule } from './reservations/reservations.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      ignoreEnvFile: ['true', '1'].includes(process.env.CI ?? ''),
       validate: validateEnvironment,
     }),
     DatabaseModule,
@@ -25,6 +28,7 @@ import { ReservationsModule } from './reservations/reservations.module';
     ReservationsModule,
   ],
   controllers: [AppController],
+  providers: [MaintenanceService, HealthService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

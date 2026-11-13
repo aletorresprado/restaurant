@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -9,8 +8,8 @@ import path from 'node:path';
 const apiRequire = createRequire(new URL('../../api/package.json', import.meta.url));
 const { PrismaClient } = apiRequire('@prisma/client');
 const bcrypt = apiRequire('bcryptjs');
-const environment = fileURLToPath(new URL('../../api/.env', import.meta.url));
-if (existsSync(environment)) process.loadEnvFile(environment);
+const testDatabase = apiRequire('../../scripts/test-database.cjs');
+testDatabase.loadTestEnvironment();
 
 test('verifies email and recovers a password from private local mail without leaking or reusing the link', async ({ page, context }) => {
   const db = new PrismaClient();

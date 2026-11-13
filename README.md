@@ -4,7 +4,9 @@ Monorepo pnpm con API NestJS, validación Zod y tipos compartidos.
 
 ## Estado
 
-Estado al 12 de noviembre de 2026: etapas 1 a 6 completadas en desarrollo local, con sesiones HttpOnly y recuperación de reservas/gestión entre pestañas. Etapa 7 en curso: límites por IP/correo, CSP, recuperación de contraseña y verificación de correo implementados localmente. Falta activar y verificar la entrega SMTP real. El proyecto aún no está preparado para operar en producción.
+El alcance acordado es **publicar la aplicación web en un hosting, dejarla funcionando y presentarla como proyecto final de la maestría en desarrollo con IA**. La entrega incluye documentación del proceso con Lovable, Codex y GitHub. Google Play y App Store quedan fuera de esta etapa. La elección y contratación de hosting/correo se acordarán con el propietario.
+
+Estado al 13 de noviembre de 2026: etapas 1 a 6 completadas en desarrollo local, con sesiones HttpOnly y recuperación de reservas/gestión entre pestañas. Etapa 7 en curso: límites por IP/correo, CSP, recuperación de contraseña y verificación de correo implementados localmente. Falta activar y verificar la entrega SMTP real. El proyecto aún no está preparado para operar en producción.
 
 - Identidad: registro, login, perfil, renovación y cierre de sesión con persistencia PostgreSQL/Prisma.
 - Organización: permisos por rol, sucursales y asignaciones de personal, con permisos consultados en cada petición.
@@ -22,6 +24,22 @@ La API responde **429** con tiempo de espera cuando una IP supera la cuota: logi
 **CSP implementada:** el build web solo permite scripts y conexiones del mismo origen, mantiene Google Fonts y las imágenes/previsualizaciones y bloquea scripts inline/eval. Incluye CSP en el HTML; `preview` agrega encabezados HTTP y la compilación genera `dist/security-headers.json` para configurar el futuro hosting. Ese JSON no instala encabezados automáticamente. Desarrollo tiene excepciones separadas para HMR y Swagger una política propia. Ver [CSP.md](docs/CSP.md), comandos y limitaciones de despliegue. No requiere servicios ni migraciones nuevos.
 
 Validación del 12 de noviembre: build, tipos, 72 pruebas (39 API + 33 web), integración PostgreSQL y doce recorridos de `pnpm.cmd --filter @repo/web test:security` aprobados. Incluye fallos por correo, pausa sin prórroga, concurrencia, recuperación por éxito/vencimiento, mensaje de espera en móvil/escritorio, recuperación con el mismo UUID tras 429, CSP, Swagger y flujos del build. Las primeras corridas de CSP tuvieron demoras y una desconexión de PostgreSQL; la última suite ampliada aprobó completa, incluyendo recuperación y verificación de correo. No se repitieron los veinte recorridos generales anteriores ni se hicieron pruebas de carga. Detalles en [CSP.md](docs/CSP.md) y [LIMITES-API.md](docs/LIMITES-API.md). Recuperación de contraseña y verificación de correo ya implementadas con buzón local; envío real y cola persistente pendientes.
+
+## Integración continua
+
+Está preparado `.github/workflows/ci.yml` para push/PR a `main` e inicio manual. GitHub instalará con el lockfile, generará Prisma, aplicará las diez migraciones a PostgreSQL 16 temporal con usuario sin privilegios de administrador, compilará y ejecutará pruebas de API/web, integración y navegador. Usa Node 22.19.0 (`.node-version`) y pnpm 9.15.4. No despliega, no usa credenciales reales ni envía correo a internet.
+
+La guarda de pruebas acepta en CI únicamente una base local `app_resto_ci` o su sufijo temporal; rechaza la base de desarrollo y no carga su `.env`. En desarrollo conserva la restricción a `app_resto_dev`. Comandos nuevos: `pnpm.cmd test:guards` y `pnpm.cmd ci:preflight` (este último requiere configurar una base CI realmente descartable). Procedimiento de **Actions**, aislamiento y resultados en [CI.md](docs/CI.md). La primera ejecución remota queda pendiente hasta subir el workflow; no se considera aprobado en GitHub por validar el archivo localmente.
+
+Validación local de CI: actionlint, tres guardas de destino, permisos del usuario, diez migraciones desde cero y repetición sin pendientes, build/tipos, 81 pruebas API/web, integración y prueba del operador aprobados. Últimas suites de navegador: **20 recorridos generales + 12 de seguridad aprobados** sobre bases descartables. Hubo fallos iniciales de tiempo en bloqueos; se corrigió el helper para esperar la sesión visible y la redirección, y la corrida general final aprobó completa. No se modificaron los tiempos de producción ni se ocultaron errores con reintentos. Las bases temporales fueron retiradas; el runner Ubuntu remoto todavía no se ejecutó.
+
+## Mantenimiento y salud de PostgreSQL
+
+Desde el 13 de noviembre, la API limpia sesiones y enlaces vencidos al iniciar y cada 15 minutos, en lotes acotados, conservando los vigentes. Usa UTC explícito y no toca cuentas, reservas, puntos ni archivos del buzón. Por defecto no hace falta configurar nada; variables opcionales `MAINTENANCE_ENABLED`, `MAINTENANCE_INTERVAL_SECONDS` y `MAINTENANCE_BATCH_SIZE` en `.env.example`. No requiere dependencias ni migraciones nuevas.
+
+Para probar: iniciar `pnpm.cmd dev` y abrir [salud del proceso](http://127.0.0.1:3000/api/v1/health) y [salud de PostgreSQL](http://127.0.0.1:3000/api/v1/health/ready). El primero conserva su contrato; el segundo devuelve HTTP 200 con `checks.database: up`, o 503 si la base falla o supera el plazo de 2 segundos. Caché interna de 1 segundo y una consulta compartida evitan acumular comprobaciones; el timeout HTTP no cancela físicamente una consulta pendiente. No expone detalles de conexión.
+
+Validación de esta entrega: build, tipos, **81 pruebas (48 API + 33 web)** e integración PostgreSQL ampliada. La limpieza se verifica en tablas temporales con la estructura real, sin eliminar datos de la aplicación; incluye vigentes a un minuto de vencer, presupuesto por ejecución e idempotencia en Pacific/Auckland. La primera prueba detectó un desfase horario que se corrigió con comparación UTC explícita. No se repitieron los doce recorridos de navegador del incremento anterior ni se hicieron pruebas de carga. Procedimiento de Swagger, logs, configuración y pendientes en [MANTENIMIENTO.md](docs/MANTENIMIENTO.md).
 
 ## Correo y recuperación de cuenta
 
@@ -117,7 +135,7 @@ Todos los endpoints llevan el prefijo `/api/v1/auth`:
 
 Los endpoints Bearer de esta tabla (Swagger/clientes API) devuelven `user`, `accessToken` y `refreshToken`. La web usa `/auth/web/login`, `/auth/web/register` y `/auth/web/logout`, con cookies HttpOnly, y recibe solo el usuario. La contraseña requiere al menos 8 caracteres, una mayúscula y un número; máximo 72 bytes por el límite de bcrypt. Correos normalizados a minúsculas. Nunca se devuelven hashes de contraseñas.
 
-Al renovar, reemplazar ambos tokens en el cliente: el refresh anterior deja de funcionar. Logout revoca el refresh presentado; el access token sigue vigente hasta su expiración (15 minutos por defecto). Restablecer la contraseña incrementa la versión de credenciales y revoca también los access tokens anteriores. Logout de todos los dispositivos como acción independiente sigue pendiente. Las sesiones vencidas se rechazan, pero aún no hay tarea de limpieza de sus registros.
+Al renovar, reemplazar ambos tokens en el cliente: el refresh anterior deja de funcionar. Logout revoca el refresh presentado; el access token sigue vigente hasta su expiración (15 minutos por defecto). Restablecer la contraseña incrementa la versión de credenciales y revoca también los access tokens anteriores. Logout de todos los dispositivos como acción independiente sigue pendiente. Las sesiones vencidas se rechazan y sus registros se limpian periódicamente junto con los enlaces vencidos; ver [MANTENIMIENTO.md](docs/MANTENIMIENTO.md).
 
 ## Administrador inicial
 

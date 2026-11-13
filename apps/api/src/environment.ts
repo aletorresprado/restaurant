@@ -35,6 +35,9 @@ export function validateEnvironment(input: Record<string, unknown>) {
     SMTP_USER: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     MAIL_FROM: z.string().email().optional(),
+    MAINTENANCE_ENABLED: z.enum(['true', 'false']).default('true').transform(value => value === 'true'),
+    MAINTENANCE_INTERVAL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900),
+    MAINTENANCE_BATCH_SIZE: z.coerce.number().int().min(10).max(1000).default(500),
   }).passthrough().parse(input);
   if (value.NODE_ENV === 'production' &&
       (!input.WEB_ORIGINS || value.WEB_ORIGINS.some(origin => !origin.startsWith('https://'))))

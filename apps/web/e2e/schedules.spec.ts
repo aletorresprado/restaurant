@@ -1,14 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 
 const apiRequire = createRequire(new URL('../../api/package.json', import.meta.url));
 const { PrismaClient } = apiRequire('@prisma/client');
 const bcrypt = apiRequire('bcryptjs');
-const environment = fileURLToPath(new URL('../../api/.env', import.meta.url));
-if (existsSync(environment)) process.loadEnvFile(environment);
+const testDatabase = apiRequire('../../scripts/test-database.cjs');
+testDatabase.loadTestEnvironment();
 const plusDay = (date: string, n: number) =>
   new Date(Date.parse(`${date}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 

@@ -1,10 +1,12 @@
 # Hoja de ruta a producción
 
-Actualizado: 12 de noviembre de 2026.
+Actualizado: 13 de noviembre de 2026.
 
 ## Punto de partida
 
-Las etapas 1–6 del [plan](PLAN.md) están implementadas en desarrollo local. Hay diez migraciones versionadas, 39 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes, imágenes e idempotencia de reservas. El frontend agrega 33 pruebas unitarias y veinte recorridos de navegador contra la base real verificados en la entrega anterior: cliente, gestión, sucursales, mesas, horarios, bloqueos, sesiones y recuperación de reservas en escritorio/móvil. Incluyen respuestas perdidas, recarga sin reenvío automático, dos pestañas recuperando una misma reserva y almacenamiento bloqueado. La recuperación de altas y ajustes entre pestañas está implementada; ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). La etapa 7 está en curso con límites por IP/correo y CSP local para una instancia de API. Las sesiones web ya usan cookies HttpOnly; ver SESIONES-WEB.md.
+Entrega final acordada: aplicación web publicada y funcionando en un hosting, con documentación y demostración para la maestría en desarrollo con IA. Google Play y App Store quedan fuera del alcance; se elegirá proveedor y presupuesto con el propietario antes de contratar.
+
+Las etapas 1–6 del [plan](PLAN.md) están implementadas en desarrollo local. Hay diez migraciones versionadas, 48 pruebas de API e integración PostgreSQL con concurrencia, aislamiento, asistencia, puntos, encuestas, ajustes, imágenes e idempotencia de reservas. El frontend agrega 33 pruebas unitarias y veinte recorridos de navegador contra la base real verificados en la entrega anterior: cliente, gestión, sucursales, mesas, horarios, bloqueos, sesiones y recuperación de reservas en escritorio/móvil. Incluyen respuestas perdidas, recarga sin reenvío automático, dos pestañas recuperando una misma reserva y almacenamiento bloqueado. La recuperación de altas y ajustes entre pestañas está implementada; ver [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md). La etapa 7 está en curso con límites por IP/correo y CSP local para una instancia de API. Las sesiones web ya usan cookies HttpOnly; ver SESIONES-WEB.md.
 
 La base local, sus contraseñas y los logs no forman parte del repositorio. El servicio de Windows y los procesos iniciados en el equipo de desarrollo no constituyen un despliegue productivo. Hay web de clientes, agenda del personal y administración de usuarios, asignaciones, puntos y configuración operativa. Siguen pendientes infraestructura e integración continua.
 
@@ -26,7 +28,7 @@ La asistencia sigue siendo manual y su resultado definitivo. Los puntos se aplic
 ## 2. Interfaz — etapa 6 completada en desarrollo; validaciones de publicación pendientes
 
 - [x] Web adaptable elegida: React/Vite, Tailwind y TanStack Router, adaptada del diseño de Lovable.
-- [x] Registro, login y sesión para integración local; sesiones HttpOnly y coordinación entre pestañas implementadas; recuperación pública de cuenta pendiente en etapa 7.
+- [x] Registro, login, sesiones HttpOnly y recuperación/verificación de cuenta implementados localmente; coordinación entre pestañas y buzón local probados. Entrega SMTP real pendiente.
 - [x] Sucursal, fecha de servicio, tamaño de grupo, turnos libres y confirmación conectados a la API.
 - [x] Reservas propias, cancelaciones y consulta de fidelización/encuestas para clientes.
 - [x] Asistencia para el personal y ajustes de puntos para administración desde la interfaz.
@@ -57,9 +59,10 @@ El recorrido del cliente y la gestión del restaurante se conectan a la API real
 - [ ] Acordar proveedor/costo, validar remitente/dominio y probar entrega real. Agregar cola persistente, reintentos, retención de mensajes y alertas. El modo de archivos no completa el envío productivo.
 - [x] Revocación inmediata de la sesión web por cookie al salir de su pestaña; guarda hash, caduca en ocho horas por defecto y comprueba estado/rol en la base.
 - [ ] Definir cierre global y revocación inmediata para los JWT de clientes Bearer/Swagger, que mantienen su contrato anterior. No confundirlos con las cookies web.
-- [ ] Programar limpieza de sesiones vencidas y definir conservación de bloqueos antiguos, eventos y datos de clientes.
+- [x] Limpieza programada de sesiones/enlaces vencidos, en UTC y lotes acotados; preserva vigentes. Sin endpoint público de borrado. Ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
+- [ ] Definir conservación de bloqueos, eventos, clientes y archivos de correo; la limpieza actual no los borra.
 - [ ] Configurar logs operativos sin contraseñas, tokens ni datos personales innecesarios; definir acceso y retención.
-- [ ] Agregar comprobación de disponibilidad de PostgreSQL para supervisión. El endpoint `health` actual informa que el proceso responde, no valida la conexión a la base.
+- [x] `/health/ready` consulta PostgreSQL con caché, espera HTTP de 2 segundos y respuesta 503 sin datos internos; `/health` conserva liveness. Falta conectar el monitor/alertas del hosting.
 - [ ] Proteger o deshabilitar Swagger en producción. Hoy se publica siempre en `/api/docs`.
 - [ ] Revisar dependencias y resolver los hallazgos relevantes antes de publicar.
 - [ ] Validar capacidad y tiempos de respuesta bajo carga representativa. Reservas y cambios operativos se serializan por sucursal; las pruebas funcionales actuales no son una prueba de carga.
@@ -73,7 +76,8 @@ Cierre: configuración de producción explícita, políticas implementadas y pru
 - [ ] Elegir alojamiento para API, frontend y PostgreSQL; definir proceso de arranque, reinicio y acceso administrativo.
 - [ ] Configurar HTTPS y conectividad de base restringida a los servicios que la necesitan. Las cookies Secure/__Host- requieren HTTPS real en producción; no basta la variable NODE_ENV.
 - [ ] Inyectar `DATABASE_URL`, `JWT_ACCESS_SECRET`, expiraciones, `NODE_ENV` y `PORT` mediante el sistema de secretos del proveedor. No usar credenciales de `compose.yaml` ni copiar archivos `.env` locales.
-- [ ] Configurar CI para instalación con lockfile, generación Prisma, compilación, pruebas, tipos e integración sobre PostgreSQL aislado.
+- [x] Preparar workflow CI con instalación bloqueada, Prisma/migraciones, build, tipos, pruebas e integración sobre PostgreSQL temporal con usuario sin privilegios de administrador. Ver [CI.md](CI.md).
+- [ ] Confirmar la primera ejecución remota del workflow. La última validación local aprobó los 20+12 recorridos tras sincronizar el helper de ingreso de bloqueos; validar YAML y pasos locales no sustituye una corrida aprobada en GitHub.
 - [ ] Definir ejecución de migraciones una sola vez por despliegue y permisos necesarios; no correr `prisma migrate dev` en producción.
 - [ ] Crear un administrador inicial por el procedimiento de seed, sin credenciales predeterminadas y sin repetirlo automáticamente en cada arranque.
 - [ ] Configurar copias de seguridad y retención; acordar cuánta pérdida de datos y tiempo de recuperación son aceptables.
@@ -97,6 +101,10 @@ Cierre: un entorno de prueba se puede desplegar y restaurar siguiendo instruccio
 Cierre: el producto es accesible por su dominio, con respaldos restaurables, supervisión y responsables definidos. Registrar fecha y versión desplegada.
 
 ## Comprobaciones de la versión actual
+
+Incremento CI del 13 de noviembre: workflow aprobado por actionlint; tres guardas y preflight real sin privilegios elevados; diez migraciones desde base vacía y segunda aplicación sin pendientes; build, tipos, 81 pruebas, integración y prueba del operador aprobados sobre bases CI nuevas. Últimas ejecuciones de navegador aprobadas: 20 generales en 2,8 minutos y 12 de seguridad en 59,7 segundos. Los intentos iniciales de bloqueos tuvieron timeouts; se corrigió la sincronización del helper para esperar sesión/redirección y la corrida general final aprobó completa. No se alteraron timeouts de producción ni reintentos. Bases temporales retiradas. Falta subir el workflow y registrar una ejecución remota Linux aprobada; no se ha desplegado la aplicación.
+
+Entrega del 13 de noviembre: build, tipos y **81 pruebas (48 API + 33 web)** aprobados; integración PostgreSQL completa con readiness y limpieza SQL en tablas temporales aisladas, sin eliminar registros de la aplicación. Se verificaron UTC en Pacific/Auckland, vigentes próximos a vencer, presupuesto por ejecución e idempotencia. HTTP y dobles comprueban 503, plazo, caché y recuperación, sin detener la base real. No hay dependencias/migraciones nuevas ni cambios visuales; los doce recorridos de navegador del 12 de noviembre son antecedente y no se repitieron. No hay prueba de carga ni despliegue. Ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
 
 Validación del 12 de noviembre de 2026: compilación del monorepo, chequeo de tipos, 72 pruebas (39 API + 33 web), integración PostgreSQL y revisión del diff. Incluye límites por grupo, expiración, memoria acotada, solicitudes concurrentes y rechazo HTTP antes de ejecutar operaciones; la web conserva sesión y UUID tras 429. La suite aislada aprobó doce recorridos en escritorio/móvil, incluyendo pausa por cinco fallos de ingreso, build con CSP, desarrollo y Swagger. Detalles en [CSP.md](CSP.md) y [LIMITES-API.md](LIMITES-API.md). Los veinte recorridos generales de la entrega anterior son un antecedente; no se repitió esa suite completa en este incremento. No hay pruebas de carga ni despliegue de prueba. Se aplicó la décima migración de enlaces de cuenta y versión de credenciales.
 

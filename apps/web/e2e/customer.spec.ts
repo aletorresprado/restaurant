@@ -1,13 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 
 const apiRequire = createRequire(new URL('../../api/package.json', import.meta.url));
 const { PrismaClient } = apiRequire('@prisma/client');
-const environment = fileURLToPath(new URL('../../api/.env', import.meta.url));
-if (existsSync(environment)) process.loadEnvFile(environment);
+const testDatabase = apiRequire('../../scripts/test-database.cjs');
+testDatabase.loadTestEnvironment();
 
 test('customer reserves, reloads, cancels and logs in against PostgreSQL', async ({
   page,

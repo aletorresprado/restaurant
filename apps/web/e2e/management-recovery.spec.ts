@@ -1,19 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 const apiRequire = createRequire(new URL('../../api/package.json', import.meta.url));
 const { PrismaClient } = apiRequire('@prisma/client');
 const bcrypt = apiRequire('bcryptjs');
-const environment = fileURLToPath(new URL('../../api/.env', import.meta.url));
-if (existsSync(environment)) process.loadEnvFile(environment);
-const target = new URL(process.env.DATABASE_URL ?? '');
-if (
-  !['localhost', '127.0.0.1', '[::1]'].includes(target.hostname) ||
-  target.pathname !== '/app_resto_dev'
-)
-  throw new Error('Estas pruebas requieren PostgreSQL local app_resto_dev.');
+const testDatabase = apiRequire('../../scripts/test-database.cjs');
+testDatabase.loadTestEnvironment();
+
 async function login(page: Page, email: string) {
   await page.goto('/ingresar');
   await page.getByLabel('Email', { exact: true }).fill(email);

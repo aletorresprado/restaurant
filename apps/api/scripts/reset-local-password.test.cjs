@@ -1,17 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
-const { existsSync } = require('node:fs');
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const { resetLocalPassword } = require('./reset-local-password.cjs');
 
 test('local password reset preserves account data, rejects weak passwords and removes only its sessions', async () => {
-  if (existsSync('.env')) process.loadEnvFile('.env');
-  const target = new URL(process.env.DATABASE_URL ?? '');
-  assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(target.hostname));
-  assert.equal(target.pathname, '/app_resto_dev');
-  assert.equal(process.env.NODE_ENV ?? 'development', 'development');
+  require('../../../scripts/test-database.cjs').loadTestEnvironment();
   const db = new PrismaClient();
   const ids = [randomUUID(), randomUUID()];
   const email = `reset-${ids[0]}@example.test`;

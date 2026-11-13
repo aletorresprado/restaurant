@@ -81,7 +81,7 @@ Son ejemplos, no credenciales funcionales. Puerto 465 usa TLS desde el inicio; o
 
 Producción exige SMTP completo, `PUBLIC_WEB_URL` HTTPS explícito y que ese origen figure en `WEB_ORIGINS`. Antes de activar el envío: acordar proveedor/costo, validar dominio/remitente y sus registros SPF/DKIM/DMARC, probar entrega y spam y definir soporte si alguien no reconoce un cambio. No se ha comprobado entrega SMTP real en esta implementación.
 
-La entrega se dispara en segundo plano y registra únicamente un aviso genérico si falla, sin destinatario, token ni detalle del proveedor. **Todavía no hay cola persistente ni reintentos automáticos**: una caída puede perder un mensaje; el usuario podrá solicitar otro al terminar la espera. Configurar cola/retención, limpieza de tokens vencidos, supervisión y pruebas del proveedor antes de publicar. Las alertas de cambio tampoco tienen garantía de entrega sin esa infraestructura.
+La entrega se dispara en segundo plano y registra únicamente un aviso genérico si falla, sin destinatario, token ni detalle del proveedor. **Todavía no hay cola persistente ni reintentos automáticos**: una caída puede perder un mensaje; el usuario podrá solicitar otro al terminar la espera. La limpieza de tokens vencidos ya está implementada mediante [MANTENIMIENTO.md](MANTENIMIENTO.md). Configurar cola, retención de mensajes, supervisión y pruebas del proveedor antes de publicar. Las alertas de cambio tampoco tienen garantía de entrega sin esa infraestructura.
 
 ## Validación
 

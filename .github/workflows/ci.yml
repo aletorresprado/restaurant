@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build, tests and isolated PostgreSQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_DB: app_resto_ci
+          POSTGRES_USER: postgres
+          # Disposable service-only fixtures, never production credentials.
+          POSTGRES_PASSWORD: ci-container-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_resto_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: 'true'
+      NODE_ENV: development
+      DATABASE_URL: postgresql://resto_ci:ci-app-only@127.0.0.1:5432/app_resto_ci
+      JWT_ACCESS_SECRET: ci-fixture-only-secret-with-at-least-32-characters
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      MAIL_MODE: file
+      PUBLIC_WEB_URL: http://127.0.0.1:5173
+      WEB_ORIGINS: http://127.0.0.1:5173,http://localhost:5173
+      MAINTENANCE_ENABLED: 'false'
+      TURBO_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - name: Install Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare non-admin database user
+        env:
+          PGPASSWORD: ci-container-only
+        run: |
+          docker exec -e PGPASSWORD '${{ job.services.postgres.id }}' psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE resto_ci LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD 'ci-app-only';" \
+            -c 'ALTER DATABASE app_resto_ci OWNER TO resto_ci;'
+      - name: Generate Prisma client
+        run: pnpm --filter @repo/api db:generate
+      - name: Verify isolated target and permissions
+        run: |
+          pnpm test:guards
+          pnpm ci:preflight
+      - name: Validate and apply versioned migrations
+        run: |
+          pnpm --filter @repo/api exec prisma validate
+          pnpm --filter @repo/api db:deploy
+          pnpm --filter @repo/api exec prisma migrate status
+      - name: Build and check types
+        run: |
+          pnpm build
+          pnpm lint
+      - name: Unit and HTTP tests
+        run: pnpm test
+      - name: PostgreSQL integration and password reset operator test
+        run: |
+          pnpm --filter @repo/api test:integration
+          pnpm --filter @repo/api exec node --test scripts/reset-local-password.test.cjs
+      - name: Install Chromium and Linux dependencies
+        run: pnpm --filter @repo/web exec playwright install --with-deps chromium
+      - name: Desktop and mobile browser flows
+        run: pnpm --filter @repo/web test:e2e
+      - name: Built web, CSP and account browser flows
+        run: pnpm --filter @repo/web test:security
+      - name: Whitespace check
+        run: git diff --check
+      # No env files, mailbox, traces or reports are uploaded as artifacts.
