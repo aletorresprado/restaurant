@@ -31,6 +31,8 @@ Está preparado `.github/workflows/ci.yml` para push/PR a `main` e inicio manual
 
 La guarda de pruebas acepta en CI únicamente una base local `app_resto_ci` o su sufijo temporal; rechaza la base de desarrollo y no carga su `.env`. En desarrollo conserva la restricción a `app_resto_dev`. Comandos nuevos: `pnpm.cmd test:guards` y `pnpm.cmd ci:preflight` (este último requiere configurar una base CI realmente descartable). Procedimiento de **Actions**, aislamiento y resultados en [CI.md](docs/CI.md). La primera ejecución remota queda pendiente hasta subir el workflow; no se considera aprobado en GitHub por validar el archivo localmente.
 
+Primera ejecución remota iniciada el 13 de noviembre: detectó un BOM UTF-8 en `package.json` al instalar pnpm. Se normalizó el archivo a UTF-8 sin BOM y se volvió a ejecutar CI. El estado de cierre se registra en [CI.md](docs/CI.md).
+
 Validación local de CI: actionlint, tres guardas de destino, permisos del usuario, diez migraciones desde cero y repetición sin pendientes, build/tipos, 81 pruebas API/web, integración y prueba del operador aprobados. Últimas suites de navegador: **20 recorridos generales + 12 de seguridad aprobados** sobre bases descartables. Hubo fallos iniciales de tiempo en bloqueos; se corrigió el helper para esperar la sesión visible y la redirección, y la corrida general final aprobó completa. No se modificaron los tiempos de producción ni se ocultaron errores con reintentos. Las bases temporales fueron retiradas; el runner Ubuntu remoto todavía no se ejecutó.
 
 ## Mantenimiento y salud de PostgreSQL
