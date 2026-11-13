@@ -77,4 +77,4 @@ Resultado del 13 de noviembre: compilación del monorepo, tipos, 81 pruebas (48 
 
 Referencias: [PostgreSQL SELECT y SKIP LOCKED](https://www.postgresql.org/docs/16/sql-select.html), [temporizadores Node.js](https://nodejs.org/docs/latest-v22.x/api/timers.html#timeoutunref).
 
-Continúan pendientes la conservación del resto de los datos y archivos de correo, cola persistente y entrega SMTP, logs centralizados/alertas, CI con base aislada y pruebas de carga/despliegue. El alcance de presentación es la publicación web para la tesis; Google Play y App Store no forman parte de esta entrega.
+Continúan pendientes la conservación del resto de los datos y archivos de correo, cola persistente y entrega SMTP, logs centralizados/alertas y pruebas de carga/despliegue. CI con base aislada ya está implementada y verificada en GitHub; ver [CI.md](CI.md). El alcance de presentación es la publicación web para la tesis; Google Play y App Store no forman parte de esta entrega.
