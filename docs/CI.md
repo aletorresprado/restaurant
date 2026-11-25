@@ -67,6 +67,8 @@ Para probar CI localmente hace falta una base descartable distinta de `app_resto
 
 ## Estado de validación
 
+**Validación remota del 25 de noviembre de 2026:** [CI 45640945652](https://github.com/aletorresprado/restaurant/actions/runs/45640945652), commit `9636eaa`, aprobada completa. Doce migraciones desde cero, build/tipos, cuatro guardas, 59 pruebas API + 33 web, integración PostgreSQL con cola/rollback y prueba del operador. Veinte recorridos generales en 1,4 minutos y doce de seguridad en 30,7 segundos. Sin reintentos automáticos; todos los pasos y limpieza de contenedores terminaron con éxito. No se usaron credenciales reales, SMTP externo ni producción. Continúan pendientes proveedor/correo real, supervisión, hosting y respaldo/restauración.
+
 **Primera ejecución remota completa aprobada:** [CI 43459544441](https://github.com/aletorresprado/restaurant/actions/runs/43459544441), commit `ab7b4bf`, 13 de noviembre de 2026. Runner Ubuntu 24.04, Node 22.19.0 y servicio PostgreSQL 16. Todos los pasos y su limpieza posterior finalizaron con `success`.
 
 Resultados remotos: instalación con lockfile; usuario sin privilegios elevados; cliente/esquema Prisma y diez migraciones; build y tipos; cuatro guardas; 48 pruebas API y 33 web; integración PostgreSQL y prueba del restablecimiento del operador; **20 recorridos generales en 1,9 minutos y 12 de seguridad en 43,1 segundos**. No hubo reintentos automáticos ni se omitieron suites. Los contenedores se retiraron al terminar y no se desplegó ni se consultó producción.
