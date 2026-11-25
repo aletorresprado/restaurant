@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
@@ -28,11 +28,14 @@ export class AuthService {
   private async createUser(input: RegisterDto) {
     const passwordHash = await bcrypt.hash(input.password, 12);
     try {
-      const user = await this.db.user.create({ data: {
-        email: input.email.trim().toLowerCase(), firstName: input.firstName.trim(),
-        lastName: input.lastName.trim(), phone: input.phone, passwordHash,
-      } });
-      void this.actions.request(user.email, 'VERIFY_EMAIL').catch(() => new Logger('Auth').warn('No se pudo preparar la verificacion de correo.'));
+      const user = await this.db.$transaction(async tx => {
+        const created = await tx.user.create({ data: {
+          email: input.email.trim().toLowerCase(), firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(), phone: input.phone, passwordHash,
+        } });
+        await this.actions.prepare(tx, created, 'VERIFY_EMAIL');
+        return created;
+      });
       return user;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {

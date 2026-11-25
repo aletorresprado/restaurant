@@ -61,6 +61,18 @@ Readiness es una consulta de conectividad, no certifica migraciones, acceso a to
 
 ## Cómo probar localmente
 
+### Retención del buzón local (25 de noviembre)
+
+Los archivos de correo incluyen enlaces sensibles. `LocalMailRetentionService` elimina los mensajes de desarrollo antiguos al iniciar y cada `MAINTENANCE_INTERVAL_SECONDS` (900 por defecto). `MAIL_LOCAL_RETENTION_DAYS=7` admite enteros de 1 a 30. Reiniciar la API aplica la configuración; los mensajes antiguos que cumplan los criterios se retiran sin papelera. Copiar fuera del buzón cualquier evidencia que se quiera conservar, sin versionarla ni publicarla.
+
+Solo funciona con `MAIL_MODE=file`, fuera de producción y con `MAINTENANCE_ENABLED=true`. Resuelve exactamente `MAIL_OUTBOX_DIR`, igual que el escritor de correo. Rechaza que ese directorio sea un enlace/junction. Sus directorios padres y permisos deben estar bajo control del operador: no es una defensa frente a modificaciones maliciosas concurrentes del sistema de archivos.
+
+Solo considera archivos regulares cuyo nombre coincida con timestamp de 13 dígitos, UUID v4 y extensión `.json`, tal como los genera `AccountMail`. Tanto el timestamp del nombre como la última modificación deben superar la antigüedad configurada. No lee cuerpos ni recorre subcarpetas ni sigue enlaces de entradas. Conserva nombres ajenos, mensajes recientes y archivos antiguos recién modificados. Una carpeta inexistente es normal. Los permisos/errores de disco producen un aviso genérico y se reintentan en el próximo intervalo; los borrados ya realizados no se revierten.
+
+Cada pasada limita 500 borrados y 10.000 entradas inspeccionadas, comparte una única ejecución local y espera su cierre al apagar. `capped=true` avisa que se alcanzó un límite; no garantiza que haya más mensajes. No ordena entradas: un directorio con más de 10.000 elementos ajenos puede impedir alcanzar algunos mensajes; revisar el aviso y mantener ese directorio dedicado al buzón. Los logs muestran cantidades, sin rutas, destinatarios ni tokens. No elimina cuentas ni datos de negocio y no cambia la validez de los enlaces. No modifica mensajes del proveedor SMTP ni constituye una cola o respaldo.
+
+Para comprobar sin borrar mensajes reales: `pnpm.cmd --filter @repo/api test -- --runInBand local-mail-retention.service.spec.ts`. Las pruebas crean carpetas temporales, comprueban conservación, límite de 500, reanudación, configuración desactivada, carpeta ausente, junction y aviso genérico. No requieren PostgreSQL ni SMTP. No reducir el plazo ni alterar fechas de archivos personales para probar.
+
 1. Iniciar `pnpm.cmd dev` desde la raíz y dejar la terminal abierta.
 2. Abrir `http://127.0.0.1:3000/api/v1/health`: debe responder `status: ok`.
 3. Abrir `http://127.0.0.1:3000/api/v1/health/ready`: debe mostrar `checks.database: up` con PostgreSQL disponible.
@@ -77,4 +89,4 @@ Resultado del 13 de noviembre: compilación del monorepo, tipos, 81 pruebas (48 
 
 Referencias: [PostgreSQL SELECT y SKIP LOCKED](https://www.postgresql.org/docs/16/sql-select.html), [temporizadores Node.js](https://nodejs.org/docs/latest-v22.x/api/timers.html#timeoutunref).
 
-Continúan pendientes la conservación del resto de los datos y archivos de correo, cola persistente y entrega SMTP, logs centralizados/alertas y pruebas de carga/despliegue. CI con base aislada ya está implementada y verificada en GitHub; ver [CI.md](CI.md). El alcance de presentación es la publicación web para la tesis; Google Play y App Store no forman parte de esta entrega.
+La retención del buzón local está implementada según lo descrito arriba. La cola persistente tiene trabajador y retención propios desde el 25 de noviembre, independientes de MAINTENANCE_ENABLED; ver [COLA-CORREO.md](COLA-CORREO.md). Continúan pendientes la conservación del resto de los datos, entrega SMTP real, logs centralizados/alertas y pruebas de carga/despliegue. CI con base aislada ya está implementada y verificada en GitHub; ver [CI.md](CI.md). El alcance de presentación es la publicación web para la tesis; Google Play y App Store no forman parte de esta entrega.

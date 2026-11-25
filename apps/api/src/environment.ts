@@ -27,9 +27,13 @@ export function validateEnvironment(input: Record<string, unknown>) {
     LOGIN_ACCOUNT_FAILURES: z.coerce.number().int().min(1).max(20).default(5),
     LOGIN_ACCOUNT_PAUSE_SECONDS: z.coerce.number().int().min(1).max(900).default(60),
     MAIL_MODE: z.enum(['file', 'smtp']).default('file'),
+    MAIL_QUEUE_KEY: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
+    MAIL_QUEUE_SCOPE: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/).default('main'),
+    MAIL_QUEUE_ENABLED: z.enum(['true', 'false']).default('true').transform(value => value === 'true'),
     PUBLIC_WEB_URL: z.string().url().default('http://127.0.0.1:5173')
       .refine(url => /^https?:/.test(url) && new URL(url).origin === url, 'PUBLIC_WEB_URL debe ser un origen HTTP(S) sin ruta ni barra final'),
     MAIL_OUTBOX_DIR: z.string().min(1).default('.local/mail'),
+    MAIL_LOCAL_RETENTION_DAYS: z.coerce.number().int().min(1).max(30).default(7),
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
     SMTP_USER: z.string().optional(),
@@ -39,6 +43,8 @@ export function validateEnvironment(input: Record<string, unknown>) {
     MAINTENANCE_INTERVAL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900),
     MAINTENANCE_BATCH_SIZE: z.coerce.number().int().min(10).max(1000).default(500),
   }).passthrough().parse(input);
+  if (value.NODE_ENV === 'production' && (!value.MAIL_QUEUE_KEY || !value.MAIL_QUEUE_ENABLED))
+    throw new Error('Produccion requiere MAIL_QUEUE_KEY y worker de correo habilitado');
   if (value.NODE_ENV === 'production' &&
       (!input.WEB_ORIGINS || value.WEB_ORIGINS.some(origin => !origin.startsWith('https://'))))
     throw new Error('En produccion configurar WEB_ORIGINS explicitamente con HTTPS');

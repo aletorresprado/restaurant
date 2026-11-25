@@ -10,6 +10,7 @@ import { OperationsModule } from './operations/operations.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { MaintenanceService } from './maintenance/maintenance.service';
 import { HealthService } from './health.service';
+import { LocalMailRetentionService } from './maintenance/local-mail-retention.service';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { HealthService } from './health.service';
     ReservationsModule,
   ],
   controllers: [AppController],
-  providers: [MaintenanceService, HealthService],
+  providers: [MaintenanceService, HealthService, LocalMailRetentionService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

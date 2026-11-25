@@ -23,6 +23,7 @@ export default defineConfig({
         RATE_LIMIT_WRITE: '10000', RATE_LIMIT_READ: '10000',
         LOGIN_ACCOUNT_FAILURES: '5', LOGIN_ACCOUNT_PAUSE_SECONDS: '60',
         RATE_LIMIT_ACCOUNT_REQUEST: '10000', RATE_LIMIT_ACCOUNT_CONFIRM: '10000',
+        MAIL_QUEUE_SCOPE: 'security-e2e',
         MAIL_MODE: 'file', MAIL_OUTBOX_DIR: '.local/security-mail', PUBLIC_WEB_URL: 'http://127.0.0.1:5180',
         MAINTENANCE_ENABLED: 'false' }, reuseExistingServer: false },
     { command: 'node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5180 --strictPort',

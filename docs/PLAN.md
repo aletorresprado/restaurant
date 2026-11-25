@@ -128,7 +128,7 @@ Criterio de cierre: los recorridos principales funcionan desde la interfaz contr
 ## 7. Preparación del primer despliegue — en curso
 
 1. Límites por IP/correo y CSP de web/API/Swagger implementados localmente. Aplicar encabezados de la SPA y validar CORS, proxies y HTTPS en el hosting real. Incorporar contadores compartidos antes de usar varias instancias.
-2. Recuperación/verificación implementadas localmente. Acordar proveedor/costo, configurar SMTP y remitente, y verificar entrega con cola persistente antes de publicar.
+2. Recuperación/verificación y cola cifrada con reintentos implementadas localmente. Acordar proveedor/costo, configurar SMTP, remitente, clave privada de cola y supervisión; verificar entrega real antes de publicar.
 3. Limpieza de sesiones/enlaces vencidos y readiness PostgreSQL implementadas. Completar retención del resto de datos, logs centralizados y alertas.
 4. CI implementada y verificada en GitHub/Ubuntu, con PostgreSQL aislado, migraciones, build/tipos, pruebas e integración y 32 recorridos de navegador. Evidencia en CI.md; no es un despliegue.
 5. Elegir hosting, presupuesto, secretos, copias de seguridad y procedimiento de restauración.
@@ -140,7 +140,7 @@ Seguir la lista detallada de [PRODUCCION.md](PRODUCCION.md), que incluye segurid
 
 ## Punto de reanudación — actualizado el 13 de noviembre de 2026
 
-Las etapas 1–6 están completas en desarrollo local. Las entregas anteriores incorporaron cookies HttpOnly, recuperación de reservas y altas de gestión con UUID, panel de pendientes y borradores/ajustes de puntos compartidos entre pestañas. Hay diez migraciones aplicadas localmente; no se publicaron servicios en producción. Referencias: [SESIONES-WEB.md](SESIONES-WEB.md), [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md) y [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md).
+Las etapas 1–6 están completas en desarrollo local. Las entregas anteriores incorporaron cookies HttpOnly, recuperación de reservas y altas de gestión con UUID, panel de pendientes y borradores/ajustes de puntos compartidos entre pestañas. Hay doce migraciones aplicadas localmente; no se publicaron servicios en producción. Referencias: [SESIONES-WEB.md](SESIONES-WEB.md), [RECUPERACION-RESERVAS.md](RECUPERACION-RESERVAS.md) y [RECUPERACION-GESTION.md](RECUPERACION-GESTION.md).
 
 Aceptación manual del propietario: un borrador de +2 puntos se mostró en dos pestañas y **Volver a editar** lo retiró de ambas, dejando los campos disponibles. No se confirmó un movimiento en ese recorrido.
 
@@ -178,7 +178,17 @@ Cierre remoto de CI del 13 de noviembre: commit/push inicial `c8545f1`; la prime
 
 Para continuar:
 
-1. Acordar proveedor/costo y activar el envío real cuando haya remitente/SMTP. Agregar cola persistente y supervisión de correo antes de publicar; el buzón local no envía a internet.
+Entrega de cola del 25 de noviembre: migraciones once y doce `20261125000100_mail_queue` y `20261125000200_mail_queue_scope`, cifrado autenticado de destinatario/cuerpo e inserción transaccional con registro/token/reset. Trabajador dentro de la API, reclamos atómicos con SKIP LOCKED, reserva de 120 segundos, cinco intentos y esperas 30/120/600/1800 segundos. Descarta enlaces inválidos, limpia contenido terminal y conserva metadatos siete días. Producción exige clave independiente estable. Sin proveedor nuevo ni mensajes reales; falta supervisión externa. Puede entregar correos repetidos si se pierde una confirmación. Ver [COLA-CORREO.md](COLA-CORREO.md).
+
+Validación de la cola: build, tipos, esquema Prisma, doce migraciones aplicadas y estado sin pendientes; 59 pruebas API + 33 web y cuatro guardas aprobados. Integración PostgreSQL completa aprobada, incluyendo rollback del token si falla encolar, contenido terminal borrado, reintento desde instancia nueva y SQL de cola sobre tablas temporales. Última suite de seguridad: 12/12 aprobados en 1,1 minutos, escritorio/móvil. No se repitieron los veinte recorridos generales ni carga/SMTP real. Sin commit/push ni CI remota de este incremento todavía.
+
+Incidencias de validación: las copias temporales requirieron acceso SQL propio porque los delegates de Prisma califican tablas públicas; parámetros de fechas con UTC explícito. Se separaron scopes para impedir que servidores de prueba con buzones distintos tomaran trabajos ajenos. Una corrida de navegador mostró doce casos aprobados pero quedó detenida al cerrar procesos dentro del aislamiento de Windows; se interrumpió y se repitió fuera de ese aislamiento. Una corrida posterior aprobó 10/12 y falló en ingresar antes de pedir correo; otra integración concurrente agotó su espera. No se estableció una causa definitiva de esas demoras. Repetidas por separado, la integración completa y la suite de navegador aprobaron; no se modificaron timeouts ni se agregaron reintentos de pruebas. Se observaron avisos StreamableFile de cierre prematuro durante navegación, sin fallos en las aserciones finales. No constituye una prueba de carga ni de reinicio físico de PostgreSQL.
+
+Avance del 25 de noviembre: retención automática del buzón local implementada, siete días configurables (1–30). Solo archivos generados por la aplicación con fecha del nombre y modificación antiguas, sin recursión, con límites de borrado/inspección y cierre ordenado. No se ejecutó sobre el buzón del propietario para validar: las pruebas usan directorios temporales. No completa la cola SMTP ni la retención productiva. Ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
+
+Validación: build/tipos, 54 pruebas API, 33 web y cuatro guardas aprobados. Incluye conservación de archivos y mensajes recientes, límite y reanudación, junction, ausencia de carpeta, desactivación, log genérico y validación del plazo. Sin migraciones ni dependencias nuevas. Integración PostgreSQL y Playwright no repetidos porque no cambia su comportamiento; CI remota de esta entrega pendiente de un futuro commit/push.
+
+1. Acordar proveedor/costo y activar el envío real cuando haya remitente/SMTP. La cola persistente ya está implementada; configurar su clave privada productiva y supervisión antes de publicar. El buzón local no envía a internet.
 2. Definir logs centralizados, alertas y retención de otros datos. CI ya está verificada en GitHub; limpieza y salud PostgreSQL también están implementadas.
 3. Hosting, presupuesto, secretos, respaldo/restauración y entorno de prueba, siguiendo [PRODUCCION.md](PRODUCCION.md). Aplicar encabezados CSP y verificar HTTPS/CORS/proxies; CSP por meta no sustituye `frame-ancestors` por cabecera.
 4. Ejecutar recorridos en preproducción, accesibilidad, rendimiento y revisión de dependencias antes de solicitar la publicación.

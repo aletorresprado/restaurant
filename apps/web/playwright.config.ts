@@ -31,6 +31,7 @@ export default defineConfig({
       env: { MAINTENANCE_ENABLED: 'false', RATE_LIMIT_LOGIN: '10000', RATE_LIMIT_REGISTER: '10000',
         RATE_LIMIT_REFRESH: '10000', RATE_LIMIT_WRITE: '10000', RATE_LIMIT_READ: '10000',
         RATE_LIMIT_ACCOUNT_REQUEST: '10000', RATE_LIMIT_ACCOUNT_CONFIRM: '10000',
+        MAIL_QUEUE_SCOPE: 'general-e2e',
         MAIL_MODE: 'file', PUBLIC_WEB_URL: 'http://127.0.0.1:5173', MAIL_OUTBOX_DIR: '.local/e2e-mail' },
     },
     {

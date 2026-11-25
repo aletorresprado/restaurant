@@ -31,10 +31,10 @@ describe('authentication HTTP contracts (simulated database)', () => {
       ConfigModule.forRoot({ ignoreEnvFile: true, isGlobal: true, load: [() => ({
         JWT_ACCESS_SECRET: 'test-only-secret-with-at-least-32-characters',
         JWT_ACCESS_EXPIRES_IN: '15m', JWT_REFRESH_EXPIRES_IN: '7d',
-        LOGIN_ACCOUNT_FAILURES: 2, LOGIN_ACCOUNT_PAUSE_SECONDS: 60,
+        MAIL_QUEUE_ENABLED: false, LOGIN_ACCOUNT_FAILURES: 2, LOGIN_ACCOUNT_PAUSE_SECONDS: 60,
       })] }), DatabaseModule, AuthModule,
     ] }).overrideProvider(PrismaService).useValue(db)
-      .overrideProvider(AccountActionsService).useValue({ request: async () => ({}) }).compile();
+      .overrideProvider(AccountActionsService).useValue({ request: async () => ({}), prepare: async () => ({}) }).compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
     await app.listen(0, '127.0.0.1');

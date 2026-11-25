@@ -12,6 +12,7 @@ import { AccountLoginLimit, AccountLoginLimitFilter } from './account-login-limi
 import { AccountActionsController } from './account-actions.controller';
 import { AccountActionsService } from './account-actions.service';
 import { AccountMail } from './account-mail';
+import { MailQueue } from './mail-queue';
 
 @Module({
   imports: [JwtModule.registerAsync({ inject: [ConfigService], useFactory: (config: ConfigService) => ({
@@ -20,7 +21,7 @@ import { AccountMail } from './account-mail';
     verifyOptions: { algorithms: ['HS256'] },
   }) })],
   controllers: [AuthController, BrowserAuthController, AccountActionsController], providers: [AuthService, AccessGuard, RolesGuard, BrowserSessionPolicy,
-    AccountActionsService, AccountMail,
+    AccountActionsService, AccountMail, MailQueue,
     AccountLoginLimit, { provide: APP_FILTER, useClass: AccountLoginLimitFilter }],
   exports: [AccessGuard, RolesGuard, JwtModule, BrowserSessionPolicy],
 })

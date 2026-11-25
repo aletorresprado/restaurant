@@ -22,6 +22,7 @@ No copiar encima de un `.env` existente. Con los valores predeterminados se usa 
 MAIL_MODE=file
 PUBLIC_WEB_URL=http://127.0.0.1:5173
 MAIL_OUTBOX_DIR=.local/mail
+MAIL_LOCAL_RETENTION_DAYS=7
 ```
 
 El modo de archivos solo permite enlaces a localhost/127.0.0.1/::1 y se rechaza en producción. `PUBLIC_WEB_URL` es el origen exacto de la web, sin ruta ni barra final: no se obtiene del encabezado Host del solicitante.
@@ -34,7 +35,7 @@ El modo de archivos solo permite enlaces a localhost/127.0.0.1/::1 y se rechaza 
 4. Para recuperar, escribir la contraseña nueva y su confirmación y pulsar **Guardar contraseña**. Para verificar, pulsar **Confirmar correo**. Abrir el enlace por sí solo no ejecuta ninguna acción.
 5. Tras recuperar, ingresar nuevamente con la contraseña nueva. Al verificar, el aviso se actualiza en la pestaña con sesión o al recargar las otras pestañas.
 
-El alta de un usuario solicita la verificación en segundo plano. Si no llega, puede pedirse de nuevo desde la pantalla de correo. La carpeta de buzón está ignorada por Git y bloqueada por la configuración de archivos del servidor Vite. No existe una API pública que permita consultar mensajes o recuperar sus tokens. En Windows los permisos del archivo dependen de las ACL locales: usar un equipo/carpeta privados. Los mensajes se conservan hasta que el operador los retire; su limpieza automática sigue pendiente.
+El alta de un usuario guarda su verificación en la cola dentro de la transacción de registro y el trabajador la entrega después. Si no llega, puede pedirse de nuevo desde la pantalla de correo. La carpeta de buzón está ignorada por Git y bloqueada por la configuración de archivos del servidor Vite. No existe una API pública que permita consultar mensajes o recuperar sus tokens. En Windows los permisos del archivo dependen de las ACL locales: usar un equipo/carpeta privados. Los mensajes generados antiguos se eliminan automáticamente después de siete días por defecto; detalles y configuración en [MANTENIMIENTO.md](MANTENIMIENTO.md).
 
 Para encontrar el archivo correcto en Windows, ordenar por **Fecha de modificación**, del más nuevo al más antiguo. Comprobar `to` (destinatario) y `subject` (Restablecer contraseña o Verificar correo). Copiar desde `http://` hasta el último carácter del token, sin comillas ni el `\n` que separa las líneas del JSON. Usar una cuenta ya registrada para recuperación; un correo inexistente recibe la misma respuesta, pero no genera archivo. Una cuenta ya verificada tampoco recibe otro enlace de verificación.
 
@@ -81,7 +82,7 @@ Son ejemplos, no credenciales funcionales. Puerto 465 usa TLS desde el inicio; o
 
 Producción exige SMTP completo, `PUBLIC_WEB_URL` HTTPS explícito y que ese origen figure en `WEB_ORIGINS`. Antes de activar el envío: acordar proveedor/costo, validar dominio/remitente y sus registros SPF/DKIM/DMARC, probar entrega y spam y definir soporte si alguien no reconoce un cambio. No se ha comprobado entrega SMTP real en esta implementación.
 
-La entrega se dispara en segundo plano y registra únicamente un aviso genérico si falla, sin destinatario, token ni detalle del proveedor. **Todavía no hay cola persistente ni reintentos automáticos**: una caída puede perder un mensaje; el usuario podrá solicitar otro al terminar la espera. La limpieza de tokens vencidos ya está implementada mediante [MANTENIMIENTO.md](MANTENIMIENTO.md). Configurar cola, retención de mensajes, supervisión y pruebas del proveedor antes de publicar. Las alertas de cambio tampoco tienen garantía de entrega sin esa infraestructura.
+Desde el 25 de noviembre la entrega usa una cola persistente cifrada en PostgreSQL. Registro/verificación, solicitudes de enlaces y aviso de restablecimiento guardan el trabajo en su transacción. La API reintenta hasta cinco veces sin esperar a SMTP para responder; cancela enlaces inválidos y elimina contenido al finalizar. Los registros terminados duran siete días. Puede entregar mensajes repetidos ante confirmaciones perdidas. Ver [COLA-CORREO.md](COLA-CORREO.md) para migración, clave privada y operación. La limpieza de enlaces y la retención del buzón local se describen en [MANTENIMIENTO.md](MANTENIMIENTO.md). Faltan proveedor real, supervisión externa y comprobación de entrega antes de publicar; la cola no garantiza llegada a bandeja.
 
 ## Validación
 

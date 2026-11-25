@@ -3,6 +3,8 @@ const { randomUUID, createHash } = require('node:crypto');
 const { readdir, readFile } = require('node:fs/promises');
 const path = require('node:path');
 const bcrypt = require('bcryptjs');
+const { ConfigService } = require('@nestjs/config');
+const { AccountActionsService } = require('../dist/auth/account-actions.service');
 
 module.exports = async ({ base, db }) => {
   const email = `account-actions-${randomUUID()}@example.invalid`;
@@ -28,6 +30,11 @@ module.exports = async ({ base, db }) => {
   try {
     user = await db.user.create({ data: { email, firstName: 'Account', lastName: 'Actions', role: 'STAFF', loyaltyBalance: 7,
       passwordHash: await bcrypt.hash(password, 12) } });
+    const brokenQueue = new AccountActionsService(db, new ConfigService(),
+      { enqueue: async () => { throw new Error('fixture queue unavailable'); } }, {});
+    await assert.rejects(brokenQueue.request(email, 'VERIFY_EMAIL'), /fixture queue unavailable/);
+    assert.equal(await db.accountActionToken.count({ where: { userId: user.id } }), 0,
+      'A failed enqueue must roll back its token');
     const login = await (await send('login', { email, password })).json();
     const tab = randomUUID();
     const web = await send('web/login', { email, password }, { Origin: 'http://127.0.0.1:5173', 'X-Web-Session': tab });
@@ -35,6 +42,8 @@ module.exports = async ({ base, db }) => {
     const unknown = await (await send('forgot-password', { email: `unknown-${email}` })).json();
     assert.deepEqual(await (await send('request-email-verification', { email })).json(), unknown);
     const verify = await token('verificar-correo');
+    const delivered = await db.mailJob.findFirstOrThrow({ where: { userId: user.id, status: 'sent' } });
+    assert.equal(delivered.payload, null, 'Delivered payload must be erased');
     const stored = await db.accountActionToken.findUniqueOrThrow({ where: { userId_purpose: { userId: user.id, purpose: 'VERIFY_EMAIL' } } });
     assert.equal(stored.tokenHash, createHash('sha256').update(verify).digest('hex'));
     assert.notEqual(stored.tokenHash, verify);

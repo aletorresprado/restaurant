@@ -3,6 +3,20 @@ import { describe, it, expect } from '@jest/globals';
 
 describe('environment configuration', () => {
   const valid = { DATABASE_URL: 'postgresql://user:password@localhost:5432/resto', JWT_ACCESS_SECRET: 'a'.repeat(64) };
+  it('validates queue keys and requires the worker and an explicit key in production', () => {
+    expect(validateEnvironment(valid).MAIL_QUEUE_ENABLED).toBe(true);
+    expect(() => validateEnvironment({ ...valid, MAIL_QUEUE_KEY: 'weak' })).toThrow();
+    expect(validateEnvironment(valid).MAIL_QUEUE_SCOPE).toBe('main');
+    expect(() => validateEnvironment({ ...valid, MAIL_QUEUE_SCOPE: 'invalid scope' })).toThrow();
+    expect(() => validateEnvironment({ ...valid, MAIL_QUEUE_ENABLED: 'yes' })).toThrow();
+    expect(() => validateEnvironment({ ...valid, NODE_ENV: 'production', MAIL_QUEUE_ENABLED: 'false' })).toThrow();
+  });
+  it('bounds local mailbox retention to whole days between one and thirty', () => {
+    expect(validateEnvironment(valid).MAIL_LOCAL_RETENTION_DAYS).toBe(7);
+    expect(validateEnvironment({ ...valid, MAIL_LOCAL_RETENTION_DAYS: '1' }).MAIL_LOCAL_RETENTION_DAYS).toBe(1);
+    for (const days of [0, 31, 1.5, 'invalid'])
+      expect(() => validateEnvironment({ ...valid, MAIL_LOCAL_RETENTION_DAYS: days })).toThrow();
+  });
   it('validates maintenance switches, cadence and batch bounds', () => {
     expect(validateEnvironment(valid).MAINTENANCE_ENABLED).toBe(true);
     expect(validateEnvironment({ ...valid, MAINTENANCE_ENABLED: 'false' }).MAINTENANCE_ENABLED).toBe(false);
@@ -45,7 +59,7 @@ describe('environment configuration', () => {
     expect(() => validateEnvironment({ ...valid, WEB_SESSION_HOURS: 25 })).toThrow();
     expect(validateEnvironment({ ...valid, NODE_ENV: 'production', WEB_ORIGINS: 'https://example.com',
       PUBLIC_WEB_URL: 'https://example.com', MAIL_MODE: 'smtp', SMTP_HOST: 'smtp.example.invalid',
-      SMTP_USER: 'test', SMTP_PASSWORD: 'test-only', MAIL_FROM: 'resto@example.invalid' }).WEB_ORIGINS)
+      MAIL_QUEUE_KEY: 'ab'.repeat(32), SMTP_USER: 'test', SMTP_PASSWORD: 'test-only', MAIL_FROM: 'resto@example.invalid' }).WEB_ORIGINS)
       .toEqual(['https://example.com']);
   });
 });

@@ -30,6 +30,7 @@ async function main() {
         RATE_LIMIT_REGISTER: '10000', RATE_LIMIT_REFRESH: '10000', RATE_LIMIT_WRITE: '10000', RATE_LIMIT_READ: '10000',
         LOGIN_ACCOUNT_FAILURES: '5', LOGIN_ACCOUNT_PAUSE_SECONDS: '60',
         RATE_LIMIT_ACCOUNT_REQUEST: '10000', RATE_LIMIT_ACCOUNT_CONFIRM: '10000',
+        MAIL_QUEUE_SCOPE: `integration-${randomUUID()}`,
         MAIL_MODE: 'file', PUBLIC_WEB_URL: 'http://127.0.0.1:5173', MAIL_OUTBOX_DIR: '.local/integration-mail',
         MAINTENANCE_ENABLED: 'false' },
       stdio: 'ignore', windowsHide: true,
@@ -44,6 +45,7 @@ async function main() {
     }
     assert.ok(ready, 'La API no inició a tiempo');
     await require('./maintenance.integration.cjs')({ db, base });
+    await require('./mail-queue.integration.cjs')({ db });
     const request = async (route, body, token) => {
       const response = await fetch(`${base}/auth/${route}`, {
         method: body === undefined ? 'GET' : 'POST',
